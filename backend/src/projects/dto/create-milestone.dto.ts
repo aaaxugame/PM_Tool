@@ -1,0 +1,23 @@
+import { IsString, IsOptional, IsEnum, IsDateString, IsBoolean } from 'class-validator';
+import { MilestoneStatus } from '@prisma/client';
+
+export class CreateMilestoneDto {
+  @IsString()
+  name: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsDateString()
+  @IsOptional()
+  dueDate?: string;
+
+  @IsEnum(MilestoneStatus)
+  @IsOptional()
+  status?: MilestoneStatus;
+
+  @IsBoolean()
+  @IsOptional()
+  triggersInvoice?: boolean;
+}

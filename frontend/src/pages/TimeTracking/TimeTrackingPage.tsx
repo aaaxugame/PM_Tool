@@ -1,0 +1,332 @@
+import { useState, useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
+import {
+  timeEntriesApi, timesheetsApi,
+  type TimeEntry, type Timesheet, type TimesheetStatus,
+  formatDuration, timeFromIso, dateFromIso,
+} from '../../api/timeTracking'
+import { projectsApi, type Project } from '../../api/projects'
+import Modal from '../../components/Modal'
+import TimeEntryModal from './TimeEntryModal'
+
+const TS_STATUS_COLORS: Record<TimesheetStatus, string> = {
+  DRAFT: 'bg-gray-100 text-gray-600',
+  SUBMITTED: 'bg-yellow-50 text-yellow-700',
+  APPROVED: 'bg-green-50 text-green-700',
+  REJECTED: 'bg-red-50 text-red-600',
+}
+
+export default function TimeTrackingPage() {
+  const { t } = useTranslation()
+  const [tab, setTab] = useState<'entries' | 'timesheets'>('entries')
+  const [projects, setProjects] = useState<Project[]>([])
+
+  // Time entries state
+  const [entries, setEntries] = useState<TimeEntry[]>([])
+  const [entriesLoading, setEntriesLoading] = useState(true)
+  const [projectFilter, setProjectFilter] = useState(0)
+  const [fromDate, setFromDate] = useState('')
+  const [toDate, setToDate] = useState('')
+  const [entryModal, setEntryModal] = useState<null | 'create' | TimeEntry>(null)
+  const [timerPrefill, setTimerPrefill] = useState<{ startTime?: string; endTime?: string } | undefined>()
+
+  // Timer state
+  const [timerRunning, setTimerRunning] = useState(false)
+  const [timerStart, setTimerStart] = useState<Date | null>(null)
+  const [timerDisplay, setTimerDisplay] = useState('00:00:00')
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Timesheets state
+  const [timesheets, setTimesheets] = useState<Timesheet[]>([])
+  const [tsLoading, setTsLoading] = useState(true)
+  const [tsModal, setTsModal] = useState(false)
+  const [tsForm, setTsForm] = useState({ periodStart: '', periodEnd: '' })
+  const [tsSaving, setTsSaving] = useState(false)
+
+  useEffect(() => {
+    projectsApi.list().then(r => setProjects(r.data))
+  }, [])
+
+  const loadEntries = () => {
+    setEntriesLoading(true)
+    timeEntriesApi.list({
+      projectId: projectFilter || undefined,
+      from: fromDate || undefined,
+      to: toDate || undefined,
+    }).then(r => setEntries(r.data)).finally(() => setEntriesLoading(false))
+  }
+
+  const loadTimesheets = () => {
+    setTsLoading(true)
+    timesheetsApi.list().then(r => setTimesheets(r.data)).finally(() => setTsLoading(false))
+  }
+
+  useEffect(() => { loadEntries() }, [projectFilter, fromDate, toDate])
+  useEffect(() => { if (tab === 'timesheets') loadTimesheets() }, [tab])
+
+  // Timer logic
+  const startTimer = () => {
+    const now = new Date()
+    setTimerStart(now)
+    setTimerRunning(true)
+    timerRef.current = setInterval(() => {
+      const elapsed = Math.floor((Date.now() - now.getTime()) / 1000)
+      const h = Math.floor(elapsed / 3600)
+      const m = Math.floor((elapsed % 3600) / 60)
+      const s = elapsed % 60
+      setTimerDisplay(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`)
+    }, 1000)
+  }
+
+  const stopTimer = () => {
+    if (timerRef.current) clearInterval(timerRef.current)
+    setTimerRunning(false)
+    const endTime = new Date().toTimeString().slice(0, 5)
+    const startTime = timerStart ? timerStart.toTimeString().slice(0, 5) : ''
+    setTimerPrefill({ startTime, endTime })
+    setEntryModal('create')
+    setTimerDisplay('00:00:00')
+    setTimerStart(null)
+  }
+
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current) }, [])
+
+  const handleDeleteEntry = async (id: number) => {
+    if (!confirm('Delete this time entry?')) return
+    await timeEntriesApi.remove(id)
+    loadEntries()
+  }
+
+  const handleTsSubmit = async (ts: Timesheet) => {
+    await timesheetsApi.update(ts.id, { status: 'SUBMITTED' })
+    loadTimesheets()
+  }
+
+  const handleTsDelete = async (ts: Timesheet) => {
+    if (!confirm('Delete this timesheet?')) return
+    await timesheetsApi.remove(ts.id)
+    loadTimesheets()
+  }
+
+  const handleCreateTs = async () => {
+    if (!tsForm.periodStart || !tsForm.periodEnd) return
+    setTsSaving(true)
+    try {
+      await timesheetsApi.create(tsForm)
+      loadTimesheets()
+      setTsModal(false)
+      setTsForm({ periodStart: '', periodEnd: '' })
+    } finally { setTsSaving(false) }
+  }
+
+  const totalMinutes = entries.reduce((sum, e) => sum + e.durationMinutes, 0)
+
+  return (
+    <div>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-semibold text-gray-800">{t('nav.timeTracking')}</h1>
+
+        {/* Timer widget */}
+        <div className="flex items-center gap-3">
+          <span className="font-mono text-lg text-gray-700 tabular-nums">{timerDisplay}</span>
+          <button
+            onClick={timerRunning ? stopTimer : startTimer}
+            className={`px-4 py-2 text-sm rounded-lg font-medium transition-colors ${
+              timerRunning
+                ? 'bg-red-500 text-white hover:bg-red-600'
+                : 'bg-green-500 text-white hover:bg-green-600'
+            }`}
+          >
+            {timerRunning ? '⏹ Stop' : '▶ Start Timer'}
+          </button>
+          {!timerRunning && (
+            <button onClick={() => { setTimerPrefill(undefined); setEntryModal('create') }}
+              className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700">
+              + Log Time
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="flex border-b border-gray-200 mb-5">
+        {[
+          { key: 'entries', label: 'Time Log' },
+          { key: 'timesheets', label: 'Timesheets' },
+        ].map(item => (
+          <button key={item.key} onClick={() => setTab(item.key as any)}
+            className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              tab === item.key ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'
+            }`}>
+            {item.label}
+          </button>
+        ))}
+      </div>
+
+      {/* ── TIME LOG TAB ── */}
+      {tab === 'entries' && (
+        <>
+          {/* Filters + summary */}
+          <div className="flex items-center gap-3 mb-4 flex-wrap">
+            <select value={projectFilter} onChange={e => setProjectFilter(Number(e.target.value))}
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value={0}>All Projects</option>
+              {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+            <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)}
+              placeholder="From"
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            <input type="date" value={toDate} onChange={e => setToDate(e.target.value)}
+              placeholder="To"
+              className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            {(fromDate || toDate || projectFilter) ? (
+              <button onClick={() => { setFromDate(''); setToDate(''); setProjectFilter(0) }}
+                className="text-xs text-gray-400 hover:text-gray-600">Clear filters</button>
+            ) : null}
+            {entries.length > 0 && (
+              <span className="ml-auto text-sm text-gray-500">
+                {entries.length} entries · <span className="font-medium">{formatDuration(totalMinutes)}</span> total
+              </span>
+            )}
+          </div>
+
+          {entriesLoading ? (
+            <p className="text-sm text-gray-400">{t('common.loading')}</p>
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    {['Date', 'Project', 'Task', 'Description', 'Start', 'End', 'Duration', 'Billable', ''].map(h => (
+                      <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {entries.length === 0 ? (
+                    <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">{t('common.noData')}</td></tr>
+                  ) : entries.map(e => (
+                    <tr key={e.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-gray-700 font-mono text-xs">{dateFromIso(e.date)}</td>
+                      <td className="px-4 py-3 text-gray-600">{e.project.name}</td>
+                      <td className="px-4 py-3 text-gray-400 text-xs">{e.task?.name ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-500 max-w-xs truncate">{e.description ?? '—'}</td>
+                      <td className="px-4 py-3 text-gray-600 font-mono text-xs">{timeFromIso(e.startTime)}</td>
+                      <td className="px-4 py-3 text-gray-600 font-mono text-xs">{timeFromIso(e.endTime)}</td>
+                      <td className="px-4 py-3 text-gray-700 font-medium font-mono text-xs">{formatDuration(e.durationMinutes)}</td>
+                      <td className="px-4 py-3">
+                        {e.isBillable
+                          ? <span className="px-1.5 py-0.5 bg-green-50 text-green-700 rounded text-xs">Yes</span>
+                          : <span className="text-gray-400 text-xs">No</span>}
+                      </td>
+                      <td className="px-4 py-3 text-right space-x-2">
+                        {!e.isLocked && <>
+                          <button onClick={() => setEntryModal(e)} className="text-blue-600 hover:underline text-xs">{t('common.edit')}</button>
+                          <button onClick={() => handleDeleteEntry(e.id)} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>
+                        </>}
+                        {e.isLocked && <span className="text-gray-400 text-xs">Locked</span>}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── TIMESHEETS TAB ── */}
+      {tab === 'timesheets' && (
+        <>
+          <div className="flex justify-between items-center mb-4">
+            <span className="text-sm text-gray-500">{timesheets.length} timesheet(s)</span>
+            <button onClick={() => setTsModal(true)} className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700">
+              + New Timesheet
+            </button>
+          </div>
+
+          {tsLoading ? (
+            <p className="text-sm text-gray-400">{t('common.loading')}</p>
+          ) : (
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    {['Period', 'Entries', 'Status', 'Reviewed By', ''].map(h => (
+                      <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {timesheets.length === 0 ? (
+                    <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">{t('common.noData')}</td></tr>
+                  ) : timesheets.map(ts => (
+                    <tr key={ts.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-gray-700">
+                        {dateFromIso(ts.periodStart)} — {dateFromIso(ts.periodEnd)}
+                      </td>
+                      <td className="px-4 py-3 text-gray-500 text-center">{ts._count.timeEntries}</td>
+                      <td className="px-4 py-3">
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${TS_STATUS_COLORS[ts.status]}`}>
+                          {ts.status}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-gray-500">{ts.reviewedBy?.name ?? '—'}</td>
+                      <td className="px-4 py-3 text-right space-x-2">
+                        {ts.status === 'DRAFT' && (
+                          <button onClick={() => handleTsSubmit(ts)} className="text-blue-600 hover:underline text-xs">Submit</button>
+                        )}
+                        {ts.status === 'DRAFT' && (
+                          <button onClick={() => handleTsDelete(ts)} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>
+                        )}
+                        {ts.status === 'REJECTED' && ts.rejectionReason && (
+                          <span className="text-xs text-red-500 italic">"{ts.rejectionReason}"</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Time Entry modal */}
+      {entryModal !== null && (
+        <TimeEntryModal
+          entry={entryModal === 'create' ? null : entryModal}
+          projects={projects}
+          prefill={entryModal === 'create' ? timerPrefill : undefined}
+          onClose={() => { setEntryModal(null); setTimerPrefill(undefined) }}
+          onSaved={() => { loadEntries(); setEntryModal(null); setTimerPrefill(undefined) }}
+        />
+      )}
+
+      {/* New Timesheet modal */}
+      {tsModal && (
+        <Modal title="New Timesheet" onClose={() => setTsModal(false)}>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Period Start *</label>
+              <input type="date" value={tsForm.periodStart} onChange={e => setTsForm(p => ({ ...p, periodStart: e.target.value }))}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Period End *</label>
+              <input type="date" value={tsForm.periodEnd} onChange={e => setTsForm(p => ({ ...p, periodEnd: e.target.value }))}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-5">
+            <button onClick={() => setTsModal(false)} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">{t('common.cancel')}</button>
+            <button onClick={handleCreateTs} disabled={tsSaving || !tsForm.periodStart || !tsForm.periodEnd}
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              {tsSaving ? t('common.loading') : t('common.save')}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}

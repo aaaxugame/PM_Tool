@@ -1,0 +1,16 @@
+node_modules/
+*.log
+*.png
+
+# Backend compiled output (built on deploy)
+backend/dist/
+backend/.env
+backend/node_modules/
+
+# Frontend build output (built on deploy)
+frontend/dist/
+frontend/node_modules/
+
+# OS / editor
+.DS_Store
+.vscode/

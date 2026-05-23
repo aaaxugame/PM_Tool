@@ -1,0 +1,12 @@
+import { Module } from '@nestjs/common';
+import { TimeEntriesController } from './time-entries.controller';
+import { TimeEntriesService } from './time-entries.service';
+import { TimesheetsController } from './timesheets.controller';
+import { TimesheetsService } from './timesheets.service';
+
+@Module({
+  controllers: [TimeEntriesController, TimesheetsController],
+  providers: [TimeEntriesService, TimesheetsService],
+  exports: [TimeEntriesService, TimesheetsService],
+})
+export class TimeTrackingModule {}
