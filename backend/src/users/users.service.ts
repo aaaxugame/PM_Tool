@@ -59,7 +59,7 @@ export class UsersService {
     return bcrypt.compare(password, user.passwordHash);
   }
 
-  async updateProfile(id: number, data: { name?: string; email?: string; newPassword?: string; currentPassword?: string }) {
+  async updateProfile(id: number, data: { name?: string; email?: string; newPassword?: string; currentPassword?: string; jobTitle?: string }) {
     const user = await this.findById(id);
 
     if (data.newPassword) {
@@ -78,6 +78,7 @@ export class UsersService {
     if (data.name) updateData.name = data.name;
     if (data.email) updateData.email = data.email;
     if (data.newPassword) updateData.passwordHash = await bcrypt.hash(data.newPassword, 10);
+    if (data.jobTitle !== undefined) updateData.jobTitle = data.jobTitle;
 
     const updated = await this.prisma.user.update({
       where: { id },

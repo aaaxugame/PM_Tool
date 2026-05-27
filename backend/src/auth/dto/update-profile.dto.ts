@@ -17,4 +17,8 @@ export class UpdateProfileDto {
   @IsString()
   @IsOptional()
   currentPassword?: string;
+
+  @IsString()
+  @IsOptional()
+  jobTitle?: string;
 }
