@@ -18,6 +18,7 @@ export class VendorQuotesService {
       include: {
         vendor: { select: { id: true, name: true } },
         project: { select: { id: true, name: true } },
+        milestone: { select: { id: true, name: true } },
         task: { select: { id: true, name: true } },
         submittedBy: { select: { id: true, name: true } },
         reviewedBy: { select: { id: true, name: true } },
@@ -32,6 +33,7 @@ export class VendorQuotesService {
       include: {
         vendor: { select: { id: true, name: true } },
         project: { select: { id: true, name: true } },
+        milestone: { select: { id: true, name: true } },
         task: { select: { id: true, name: true } },
         submittedBy: { select: { id: true, name: true } },
         reviewedBy: { select: { id: true, name: true } },
@@ -54,6 +56,7 @@ export class VendorQuotesService {
       include: {
         vendor: { select: { id: true, name: true } },
         project: { select: { id: true, name: true } },
+        milestone: { select: { id: true, name: true } },
       },
     });
   }
@@ -95,6 +98,7 @@ export class VendorQuotesService {
       include: {
         vendor: { select: { id: true, name: true } },
         project: { select: { id: true, name: true } },
+        milestone: { select: { id: true, name: true } },
         reviewedBy: { select: { id: true, name: true } },
       },
     });

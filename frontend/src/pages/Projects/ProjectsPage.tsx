@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { projectsApi, type Project, type ProjectStatus, type BillingMethod } from '../../api/projects'
+import { projectsApi, type Project, type ProjectStatus, type BillingMethod, type ProjectPriority } from '../../api/projects'
 import { clientsApi, type Client } from '../../api/organizations'
 import Modal from '../../components/Modal'
 
@@ -13,10 +13,25 @@ const STATUS_COLORS: Record<ProjectStatus, string> = {
   CANCELLED: 'bg-red-50 text-red-600',
 }
 
+const PRIORITY_COLORS: Record<ProjectPriority, string> = {
+  LOW: 'bg-gray-100 text-gray-500',
+  MEDIUM: 'bg-blue-50 text-blue-600',
+  HIGH: 'bg-orange-50 text-orange-600',
+  URGENT: 'bg-red-50 text-red-600',
+}
+
+const PRIORITY_ICON: Record<ProjectPriority, string> = {
+  LOW: '↓',
+  MEDIUM: '→',
+  HIGH: '↑',
+  URGENT: '⚠',
+}
+
 const EMPTY = {
   name: '',
   description: '',
   status: 'DRAFT' as ProjectStatus,
+  priority: 'MEDIUM' as ProjectPriority,
   billingMethod: 'HOURLY' as BillingMethod,
   clientId: 0,
   startDate: '',
@@ -47,6 +62,7 @@ export default function ProjectsPage() {
       name: p.name,
       description: p.description ?? '',
       status: p.status,
+      priority: p.priority ?? 'MEDIUM',
       billingMethod: p.billingMethod,
       clientId: p.clientId,
       startDate: p.startDate ? p.startDate.slice(0, 10) : '',
@@ -78,6 +94,8 @@ export default function ProjectsPage() {
   const isEditing = modal !== null && modal !== 'create'
   const set = (key: string, val: unknown) => setForm(p => ({ ...p, [key]: val }))
 
+  const PRIORITIES: ProjectPriority[] = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
@@ -94,14 +112,25 @@ export default function ProjectsPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['Name', 'Client', 'Status', 'Billing', 'Start', 'End', 'Milestones', 'Tasks', ''].map(h => (
+                {[
+                  t('common.name'),
+                  t('projects.client'),
+                  t('common.status'),
+                  t('projects.priority'),
+                  t('projects.billingMethod'),
+                  t('projects.startDate'),
+                  t('projects.endDate'),
+                  t('projects.milestones'),
+                  t('projects.tasks'),
+                  '',
+                ].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
               {projects.length === 0 ? (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">{t('common.noData')}</td></tr>
+                <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">{t('common.noData')}</td></tr>
               ) : projects.map(p => (
                 <tr key={p.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-blue-600 cursor-pointer hover:underline"
@@ -112,6 +141,12 @@ export default function ProjectsPage() {
                   <td className="px-4 py-3">
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[p.status]}`}>
                       {p.status.replace('_', ' ')}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${PRIORITY_COLORS[p.priority ?? 'MEDIUM']}`}>
+                      <span>{PRIORITY_ICON[p.priority ?? 'MEDIUM']}</span>
+                      <span>{t(`projects.priority_${p.priority ?? 'MEDIUM'}`)}</span>
                     </span>
                   </td>
                   <td className="px-4 py-3 text-gray-500">{p.billingMethod}</td>
@@ -131,21 +166,21 @@ export default function ProjectsPage() {
       )}
 
       {modal !== null && (
-        <Modal title={isEditing ? 'Edit Project' : 'New Project'} onClose={closeModal}>
+        <Modal title={isEditing ? t('projects.editProject') : t('projects.newProject')} onClose={closeModal}>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Name *</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">{t('common.name')} *</label>
               <input type="text" value={form.name} onChange={e => set('name', e.target.value)}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">{t('projects.description')}</label>
               <textarea value={form.description} onChange={e => set('description', e.target.value)} rows={2}
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Client *</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('projects.client')} *</label>
                 <select value={form.clientId} onChange={e => set('clientId', Number(e.target.value))}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value={0}>— select —</option>
@@ -153,32 +188,45 @@ export default function ProjectsPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('common.status')}</label>
                 <select value={form.status} onChange={e => set('status', e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                  {['DRAFT', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED'].map(s => (
+                  {(['DRAFT', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED'] as ProjectStatus[]).map(s => (
                     <option key={s} value={s}>{s.replace('_', ' ')}</option>
                   ))}
                 </select>
               </div>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Billing Method</label>
-              <select value={form.billingMethod} onChange={e => set('billingMethod', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                {['HOURLY', 'FIXED', 'MIXED'].map(m => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('projects.priority')}</label>
+                <select value={form.priority} onChange={e => set('priority', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  {PRIORITIES.map(p => (
+                    <option key={p} value={p}>
+                      {PRIORITY_ICON[p]} {t(`projects.priority_${p}`)}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('projects.billingMethod')}</label>
+                <select value={form.billingMethod} onChange={e => set('billingMethod', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  {['HOURLY', 'FIXED', 'MIXED'].map(m => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Start Date</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('projects.startDate')}</label>
                 <input type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">End Date</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('projects.endDate')}</label>
                 <input type="date" value={form.endDate} onChange={e => set('endDate', e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>

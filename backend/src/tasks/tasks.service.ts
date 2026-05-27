@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TaskStatus, Priority } from '@prisma/client';
+import { InvoicesService } from '../invoices/invoices.service';
 
 export interface TaskFilters {
   projectId?: number;
@@ -14,7 +15,10 @@ export interface TaskFilters {
 
 @Injectable()
 export class TasksService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private invoicesService: InvoicesService,
+  ) {}
 
   findAll(filters: TaskFilters = {}) {
     const where: any = {};
@@ -67,11 +71,12 @@ export class TasksService {
   }
 
   async update(id: number, dto: UpdateTaskDto) {
-    await this.findOne(id);
+    const existing = await this.findOne(id);
     const { dueDate, ...rest } = dto;
     const data: any = { ...rest };
     if (dueDate !== undefined) data.dueDate = new Date(dueDate);
-    return this.prisma.task.update({
+
+    const updated = await this.prisma.task.update({
       where: { id },
       data,
       include: {
@@ -80,6 +85,13 @@ export class TasksService {
         assignee: { select: { id: true, name: true } },
       },
     });
+
+    // Auto-generate vendor invoices when task is marked DONE
+    if (rest.status === 'DONE' && existing.status !== 'DONE') {
+      await this.invoicesService.autoGenerateForTask(id, existing.projectId);
+    }
+
+    return updated;
   }
 
   async remove(id: number) {

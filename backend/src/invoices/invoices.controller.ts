@@ -4,7 +4,7 @@ import { InvoicesService } from './invoices.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
-import { InvoiceStatus } from '@prisma/client';
+import { InvoiceStatus, InvoiceType } from '@prisma/client';
 
 @Controller('invoices')
 @UseGuards(AuthGuard('jwt'))
@@ -15,12 +15,16 @@ export class InvoicesController {
   findAll(
     @Query('clientId') clientId?: string,
     @Query('projectId') projectId?: string,
+    @Query('vendorId') vendorId?: string,
     @Query('status') status?: InvoiceStatus,
+    @Query('invoiceType') invoiceType?: InvoiceType,
   ) {
     return this.invoicesService.findAll({
       clientId: clientId ? Number(clientId) : undefined,
       projectId: projectId ? Number(projectId) : undefined,
+      vendorId: vendorId ? Number(vendorId) : undefined,
       status,
+      invoiceType,
     });
   }
 
@@ -42,6 +46,25 @@ export class InvoicesController {
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.invoicesService.remove(id);
+  }
+
+  @Post(':id/submit')
+  submit(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.invoicesService.submit(id, req.user.id);
+  }
+
+  @Post(':id/approve')
+  approve(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.invoicesService.approve(id, req.user.id);
+  }
+
+  @Post(':id/reject')
+  reject(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('rejectionNote') rejectionNote: string,
+    @Req() req: any,
+  ) {
+    return this.invoicesService.reject(id, req.user.id, rejectionNote);
   }
 
   @Post(':id/payments')

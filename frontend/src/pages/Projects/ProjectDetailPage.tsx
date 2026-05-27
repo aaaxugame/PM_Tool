@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { projectsApi, milestonesApi, type ProjectDetail, type Milestone, type MilestoneStatus } from '../../api/projects'
+import { projectsApi, milestonesApi, type ProjectDetail, type Milestone, type MilestoneStatus, type ProjectPriority } from '../../api/projects'
 import { tasksApi, type Task, type TaskStatus } from '../../api/tasks'
 import { usersApi, type User } from '../../api/organizations'
-import { vendorQuotesApi, budgetsApi, type VendorQuote, type Budget, type QuoteStatus } from '../../api/quotesBudgets'
+import { vendorQuotesApi, budgetsApi, type VendorQuote, type Budget, type QuoteStatus, type PaymentMode } from '../../api/quotesBudgets'
 import { vendorsApi, type Vendor } from '../../api/organizations'
 import Modal from '../../components/Modal'
 import TaskModal from '../Tasks/TaskModal'
@@ -25,6 +25,15 @@ const TASK_STATUS_CYCLE: Record<TaskStatus, TaskStatus> = {
 const PRIORITY_COLORS: Record<string, string> = {
   LOW: 'text-gray-400', MEDIUM: 'text-blue-500', HIGH: 'text-orange-500', URGENT: 'text-red-600',
 }
+const PROJECT_PRIORITY_BADGE: Record<ProjectPriority, string> = {
+  LOW: 'bg-gray-100 text-gray-500',
+  MEDIUM: 'bg-blue-50 text-blue-600',
+  HIGH: 'bg-orange-50 text-orange-600',
+  URGENT: 'bg-red-50 text-red-600',
+}
+const PRIORITY_ICON: Record<ProjectPriority, string> = {
+  LOW: '↓', MEDIUM: '→', HIGH: '↑', URGENT: '⚠',
+}
 const QUOTE_STATUS_COLORS: Record<QuoteStatus, string> = {
   PENDING: 'bg-gray-100 text-gray-600', SUBMITTED: 'bg-yellow-50 text-yellow-700',
   APPROVED: 'bg-green-50 text-green-700', REJECTED: 'bg-red-50 text-red-600',
@@ -32,7 +41,11 @@ const QUOTE_STATUS_COLORS: Record<QuoteStatus, string> = {
 
 // ── Empty forms ──────────────────────────────────────────────────────────────
 const MILESTONE_EMPTY = { name: '', description: '', dueDate: '', status: 'PENDING' as MilestoneStatus, triggersInvoice: false }
-const QUOTE_EMPTY = { vendorId: 0, quotedPrice: '', estimatedHours: '', peopleCount: '', expiryDate: '', taskId: 0 }
+const QUOTE_EMPTY = {
+  vendorId: 0, quotedPrice: '', estimatedHours: '', hourlyRate: '',
+  paymentMode: 'TASK' as PaymentMode, peopleCount: '', expiryDate: '',
+  taskId: 0, milestoneId: 0,
+}
 const BUDGET_EMPTY = { amount: '', notes: '', taskId: 0 }
 
 type ActiveTab = 'milestones' | 'tasks' | 'quotes' | 'budget'
@@ -123,8 +136,11 @@ export default function ProjectDetailPage() {
   const openQEdit = (q: VendorQuote) => {
     setQForm({
       vendorId: q.vendorId, quotedPrice: q.quotedPrice,
-      estimatedHours: q.estimatedHours ?? '', peopleCount: q.peopleCount ? String(q.peopleCount) : '',
-      expiryDate: q.expiryDate ? q.expiryDate.slice(0, 10) : '', taskId: q.taskId ?? 0,
+      estimatedHours: q.estimatedHours ?? '', hourlyRate: q.hourlyRate ?? '',
+      paymentMode: q.paymentMode ?? 'TASK',
+      peopleCount: q.peopleCount ? String(q.peopleCount) : '',
+      expiryDate: q.expiryDate ? q.expiryDate.slice(0, 10) : '',
+      taskId: q.taskId ?? 0, milestoneId: q.milestoneId ?? 0,
     })
     setQModal(q)
   }
@@ -202,18 +218,25 @@ export default function ProjectDetailPage() {
       </div>
 
       {/* Info cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
-          { label: 'Client', value: project.client.name },
-          { label: 'Billing', value: project.billingMethod },
-          { label: 'Start', value: project.startDate ? project.startDate.slice(0, 10) : '—' },
-          { label: 'End', value: project.endDate ? project.endDate.slice(0, 10) : '—' },
+          { label: t('projects.client'), value: project.client.name },
+          { label: t('projects.billingMethod'), value: project.billingMethod },
+          { label: t('projects.startDate'), value: project.startDate ? project.startDate.slice(0, 10) : '—' },
+          { label: t('projects.endDate'), value: project.endDate ? project.endDate.slice(0, 10) : '—' },
         ].map(card => (
           <div key={card.label} className="bg-white rounded-xl border border-gray-200 px-4 py-3">
             <p className="text-xs text-gray-500 mb-0.5">{card.label}</p>
             <p className="text-sm font-medium text-gray-800">{card.value}</p>
           </div>
         ))}
+        <div className="bg-white rounded-xl border border-gray-200 px-4 py-3">
+          <p className="text-xs text-gray-500 mb-0.5">{t('projects.priority')}</p>
+          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${PROJECT_PRIORITY_BADGE[project.priority ?? 'MEDIUM']}`}>
+            <span>{PRIORITY_ICON[project.priority ?? 'MEDIUM']}</span>
+            <span>{t(`projects.priority_${project.priority ?? 'MEDIUM'}`)}</span>
+          </span>
+        </div>
       </div>
 
       {/* Tabs */}
@@ -330,17 +353,29 @@ export default function ProjectDetailPage() {
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>{['Vendor', 'Price', 'Est. Hours', 'People', 'Version', 'Expiry', 'Status', ''].map(h => (
+                  <tr>{[
+                    t('admin.vendors'), t('quotes.quotedPrice'), t('quotes.hourlyRate'),
+                    t('quotes.paymentMode'), t('quotes.estimatedHours'), t('quotes.peopleCount'),
+                    'v', t('quotes.expiryDate'), t('common.status'), ''
+                  ].map(h => (
                     <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
                   ))}</tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   {quotes.length === 0 ? (
-                    <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">{t('common.noData')}</td></tr>
+                    <tr><td colSpan={10} className="px-4 py-8 text-center text-gray-400">{t('common.noData')}</td></tr>
                   ) : quotes.map(q => (
                     <tr key={q.id} className="hover:bg-gray-50">
                       <td className="px-4 py-3 font-medium text-gray-800">{q.vendor.name}</td>
                       <td className="px-4 py-3 text-gray-700 font-mono">${parseFloat(q.quotedPrice).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-3 text-gray-500 font-mono">{q.hourlyRate ? `$${parseFloat(q.hourlyRate).toFixed(2)}/h` : '—'}</td>
+                      <td className="px-4 py-3">
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700">
+                          {q.paymentMode === 'MILESTONE' ? t('quotes.byMilestone') : t('quotes.byTask')}
+                        </span>
+                        {q.milestone && <span className="ml-1 text-xs text-gray-400">{q.milestone.name}</span>}
+                        {q.task && <span className="ml-1 text-xs text-gray-400">{q.task.name}</span>}
+                      </td>
                       <td className="px-4 py-3 text-gray-500">{q.estimatedHours ?? '—'}</td>
                       <td className="px-4 py-3 text-gray-500">{q.peopleCount ?? '—'}</td>
                       <td className="px-4 py-3 text-gray-500">v{q.version}</td>
@@ -350,11 +385,11 @@ export default function ProjectDetailPage() {
                       </td>
                       <td className="px-4 py-3 text-right space-x-1 whitespace-nowrap">
                         {q.status === 'PENDING' && (
-                          <button onClick={() => handleQStatusChange(q, 'SUBMITTED')} className="text-yellow-600 hover:underline text-xs">Submit</button>
+                          <button onClick={() => handleQStatusChange(q, 'SUBMITTED')} className="text-yellow-600 hover:underline text-xs">{t('common.submit')}</button>
                         )}
                         {q.status === 'SUBMITTED' && <>
-                          <button onClick={() => handleQStatusChange(q, 'APPROVED')} className="text-green-600 hover:underline text-xs">Approve</button>
-                          <button onClick={() => handleQStatusChange(q, 'REJECTED')} className="text-red-500 hover:underline text-xs">Reject</button>
+                          <button onClick={() => handleQStatusChange(q, 'APPROVED')} className="text-green-600 hover:underline text-xs">{t('common.approve')}</button>
+                          <button onClick={() => handleQStatusChange(q, 'REJECTED')} className="text-red-500 hover:underline text-xs">{t('common.reject')}</button>
                         </>}
                         {q.status !== 'APPROVED' && (
                           <button onClick={() => openQEdit(q)} className="text-blue-600 hover:underline text-xs">{t('common.edit')}</button>
@@ -475,11 +510,12 @@ export default function ProjectDetailPage() {
 
       {/* ── QUOTE MODAL ── */}
       {qModal !== null && (
-        <Modal title={typeof qModal === 'string' ? 'New Quote' : 'Edit Quote'} onClose={() => setQModal(null)}>
+        <Modal title={typeof qModal === 'string' ? t('quotes.newQuote') : `${t('common.edit')} Quote`} onClose={() => setQModal(null)}>
           <div className="space-y-3">
+            {/* Vendor + Quoted Price */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Vendor *</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('admin.vendors')} *</label>
                 <select value={qForm.vendorId} onChange={e => setQ('vendorId', Number(e.target.value))}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value={0}>— select —</option>
@@ -487,36 +523,65 @@ export default function ProjectDetailPage() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Quoted Price *</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('quotes.quotedPrice')} *</label>
                 <input type="number" min="0" step="0.01" value={qForm.quotedPrice} onChange={e => setQ('quotedPrice', e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
+            {/* Hourly Rate + Payment Mode */}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('quotes.hourlyRate')}</label>
+                <input type="number" min="0" step="0.01" value={qForm.hourlyRate} onChange={e => setQ('hourlyRate', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('quotes.paymentMode')}</label>
+                <select value={qForm.paymentMode} onChange={e => setQ('paymentMode', e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value="TASK">{t('quotes.byTask')}</option>
+                  <option value="MILESTONE">{t('quotes.byMilestone')}</option>
+                </select>
+              </div>
+            </div>
+            {/* Est. Hours + People + Expiry */}
             <div className="grid grid-cols-3 gap-3">
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Est. Hours</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('quotes.estimatedHours')}</label>
                 <input type="number" min="0" step="0.5" value={qForm.estimatedHours} onChange={e => setQ('estimatedHours', e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">People</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('quotes.peopleCount')}</label>
                 <input type="number" min="0" step="1" value={qForm.peopleCount} onChange={e => setQ('peopleCount', e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Expiry Date</label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('quotes.expiryDate')}</label>
                 <input type="date" value={qForm.expiryDate} onChange={e => setQ('expiryDate', e.target.value)}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
               </div>
             </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Task (optional)</label>
-              <select value={qForm.taskId} onChange={e => setQ('taskId', Number(e.target.value))}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value={0}>— project-level —</option>
-                {tasks.map(task => <option key={task.id} value={task.id}>{task.name}</option>)}
-              </select>
-            </div>
+            {/* Scope: Milestone (if paymentMode=MILESTONE) or Task (if paymentMode=TASK) */}
+            {qForm.paymentMode === 'MILESTONE' ? (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('projects.milestones')} ({t('quotes.byMilestone')})</label>
+                <select value={qForm.milestoneId} onChange={e => setQ('milestoneId', Number(e.target.value))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value={0}>— project-level —</option>
+                  {project.milestones.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </div>
+            ) : (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">{t('projects.tasks')} ({t('quotes.byTask')})</label>
+                <select value={qForm.taskId} onChange={e => setQ('taskId', Number(e.target.value))}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                  <option value={0}>— project-level —</option>
+                  {tasks.map(task => <option key={task.id} value={task.id}>{task.name}</option>)}
+                </select>
+              </div>
+            )}
           </div>
           <div className="flex justify-end gap-2 mt-5">
             <button onClick={() => setQModal(null)} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">{t('common.cancel')}</button>

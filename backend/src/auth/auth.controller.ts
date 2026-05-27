@@ -1,13 +1,15 @@
-import { Controller, Post, Get, Body, Res, Req, UseGuards, HttpCode } from '@nestjs/common';
+import { Controller, Post, Get, Patch, Body, Res, Req, UseGuards, HttpCode, BadRequestException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import type { Response, Request } from 'express';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UsersService } from '../users/users.service';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private authService: AuthService, private usersService: UsersService) {}
 
   @Post('register')
   async register(@Body() dto: RegisterDto, @Res({ passthrough: true }) res: Response) {
@@ -31,6 +33,16 @@ export class AuthController {
   @UseGuards(AuthGuard('jwt'))
   me(@Req() req: Request) {
     return req.user;
+  }
+
+  @Patch('profile')
+  @UseGuards(AuthGuard('jwt'))
+  async updateProfile(@Req() req: any, @Body() dto: UpdateProfileDto) {
+    try {
+      return await this.usersService.updateProfile(req.user.id, dto);
+    } catch (e) {
+      throw new BadRequestException(e.message);
+    }
   }
 
   @Get('google')

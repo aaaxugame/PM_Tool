@@ -28,6 +28,7 @@ export interface User {
   id: number
   email: string
   name: string
+  jobTitle: string | null
   authProvider: string
   isActive: boolean
   roles: string[]

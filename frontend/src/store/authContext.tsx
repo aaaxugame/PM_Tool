@@ -7,6 +7,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   hasRole: (role: string) => boolean
+  setUser: (user: User) => void
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
@@ -35,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const hasRole = (role: string) => user?.roles.includes(role) ?? false
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, hasRole }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, hasRole, setUser }}>
       {children}
     </AuthContext.Provider>
   )

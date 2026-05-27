@@ -29,8 +29,9 @@ export class CreateLineItemDto {
 
 export class CreateInvoiceDto {
   @IsInt()
+  @IsOptional()
   @Type(() => Number)
-  clientId: number;
+  clientId?: number;
 
   @IsInt()
   @IsOptional()
@@ -70,4 +71,18 @@ export class CreateInvoiceDto {
   @ValidateNested({ each: true })
   @Type(() => CreateLineItemDto)
   lineItems: CreateLineItemDto[];
+
+  @IsEnum(['CLIENT', 'VENDOR'])
+  @IsOptional()
+  invoiceType?: 'CLIENT' | 'VENDOR';
+
+  @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  vendorId?: number;
+
+  @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  vendorQuoteId?: number;
 }

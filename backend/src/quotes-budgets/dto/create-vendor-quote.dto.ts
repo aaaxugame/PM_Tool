@@ -43,4 +43,19 @@ export class CreateVendorQuoteDto {
   @IsString()
   @IsOptional()
   rejectionReason?: string;
+
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  @Type(() => Number)
+  hourlyRate?: number;
+
+  @IsEnum(['MILESTONE', 'TASK'])
+  @IsOptional()
+  paymentMode?: 'MILESTONE' | 'TASK';
+
+  @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  milestoneId?: number;
 }

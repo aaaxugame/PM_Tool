@@ -3,12 +3,14 @@ import api from './client'
 export type ProjectStatus = 'DRAFT' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'CANCELLED'
 export type BillingMethod = 'FIXED' | 'HOURLY' | 'MIXED'
 export type MilestoneStatus = 'PENDING' | 'COMPLETED'
+export type ProjectPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
 
 export interface Project {
   id: number
   name: string
   description: string | null
   status: ProjectStatus
+  priority: ProjectPriority
   billingMethod: BillingMethod
   startDate: string | null
   endDate: string | null

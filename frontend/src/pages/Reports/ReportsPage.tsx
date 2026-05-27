@@ -304,7 +304,7 @@ export default function ReportsPage() {
                   {invoiceReport.invoices.map(inv => (
                     <tr key={inv.id} className="hover:bg-gray-50">
                       <td className="px-4 py-2.5 font-mono text-xs text-gray-500">#{String(inv.id).padStart(4, '0')}</td>
-                      <td className="px-4 py-2.5 text-gray-800">{inv.client.name}</td>
+                      <td className="px-4 py-2.5 text-gray-800">{inv.client?.name ?? inv.vendor?.name ?? '—'}</td>
                       <td className="px-4 py-2.5 text-gray-500 text-xs">{inv.invoiceDate.slice(0, 10)}</td>
                       <td className="px-4 py-2.5 text-gray-500 text-xs">{inv.dueDate.slice(0, 10)}</td>
                       <td className="px-4 py-2.5 font-mono text-gray-800">${inv.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>

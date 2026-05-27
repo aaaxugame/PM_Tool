@@ -55,7 +55,7 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-semibold text-gray-800">{t('dashboard.title')}</h1>
-        <p className="text-sm text-gray-500 mt-1">Welcome back, {user?.name}</p>
+        <p className="text-sm text-gray-500 mt-1">{t('dashboard.welcomeBack')}, {user?.name}</p>
       </div>
 
       {/* Stat cards */}
@@ -86,11 +86,11 @@ export default function DashboardPage() {
           {/* Recent Projects */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100">
-              <h2 className="text-sm font-semibold text-gray-700">Recent Projects</h2>
-              <button onClick={() => navigate('/projects')} className="text-xs text-blue-600 hover:underline">View all</button>
+              <h2 className="text-sm font-semibold text-gray-700">{t('dashboard.recentProjects')}</h2>
+              <button onClick={() => navigate('/projects')} className="text-xs text-blue-600 hover:underline">{t('dashboard.viewAll')}</button>
             </div>
             {stats.recentProjects.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-gray-400 text-center">No projects yet</p>
+              <p className="px-4 py-6 text-sm text-gray-400 text-center">{t('dashboard.noProjects')}</p>
             ) : (
               <table className="w-full text-sm">
                 <tbody className="divide-y divide-gray-50">
@@ -105,7 +105,7 @@ export default function DashboardPage() {
                           {p.status.replace('_', ' ')}
                         </span>
                       </td>
-                      <td className="px-4 py-3 text-right text-xs text-gray-400">{p._count.tasks} tasks</td>
+                      <td className="px-4 py-3 text-right text-xs text-gray-400">{p._count.tasks} {t('dashboard.tasks')}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -116,18 +116,18 @@ export default function DashboardPage() {
           {/* Recent Invoices */}
           <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
             <div className="flex justify-between items-center px-4 py-3 border-b border-gray-100">
-              <h2 className="text-sm font-semibold text-gray-700">Recent Invoices</h2>
-              <button onClick={() => navigate('/invoices')} className="text-xs text-blue-600 hover:underline">View all</button>
+              <h2 className="text-sm font-semibold text-gray-700">{t('dashboard.recentInvoices')}</h2>
+              <button onClick={() => navigate('/invoices')} className="text-xs text-blue-600 hover:underline">{t('dashboard.viewAll')}</button>
             </div>
             {stats.recentInvoices.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-gray-400 text-center">No invoices yet</p>
+              <p className="px-4 py-6 text-sm text-gray-400 text-center">{t('dashboard.noInvoices')}</p>
             ) : (
               <table className="w-full text-sm">
                 <tbody className="divide-y divide-gray-50">
                   {stats.recentInvoices.map(inv => (
                     <tr key={inv.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/invoices/${inv.id}`)}>
                       <td className="px-4 py-3">
-                        <p className="font-medium text-gray-800">#{String(inv.id).padStart(4, '0')} · {inv.client.name}</p>
+                        <p className="font-medium text-gray-800">#{String(inv.id).padStart(4, '0')} · {inv.client?.name ?? inv.vendor?.name}</p>
                         <p className="text-xs text-gray-400">Due {inv.dueDate.slice(0, 10)}</p>
                       </td>
                       <td className="px-4 py-3 text-right">

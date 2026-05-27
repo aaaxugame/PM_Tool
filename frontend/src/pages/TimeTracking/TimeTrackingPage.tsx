@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
   timeEntriesApi, timesheetsApi,
@@ -18,7 +19,10 @@ const TS_STATUS_COLORS: Record<TimesheetStatus, string> = {
 
 export default function TimeTrackingPage() {
   const { t } = useTranslation()
-  const [tab, setTab] = useState<'entries' | 'timesheets'>('entries')
+  const { pathname } = useLocation()
+  const [tab, setTab] = useState<'entries' | 'timesheets'>(
+    pathname === '/timesheets' ? 'timesheets' : 'entries'
+  )
   const [projects, setProjects] = useState<Project[]>([])
 
   // Time entries state

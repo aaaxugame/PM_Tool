@@ -11,6 +11,7 @@ import TimeTrackingPage from './pages/TimeTracking/TimeTrackingPage'
 import InvoicesPage from './pages/Invoices/InvoicesPage'
 import InvoiceDetailPage from './pages/Invoices/InvoiceDetailPage'
 import ReportsPage from './pages/Reports/ReportsPage'
+import ProfilePage from './pages/Profile/ProfilePage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth()
@@ -36,10 +37,12 @@ function AppRoutes() {
         <Route path="projects/:id" element={<ProjectDetailPage />} />
         <Route path="tasks" element={<TasksPage />} />
         <Route path="time-tracking" element={<TimeTrackingPage />} />
+        <Route path="timesheets" element={<TimeTrackingPage />} />
         <Route path="invoices" element={<InvoicesPage />} />
         <Route path="invoices/:id" element={<InvoiceDetailPage />} />
         <Route path="reports" element={<ReportsPage />} />
         <Route path="admin" element={<AdminPage />} />
+        <Route path="profile" element={<ProfilePage />} />
       </Route>
     </Routes>
   )

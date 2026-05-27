@@ -2,10 +2,14 @@ import api from './client'
 
 export type QuoteStatus = 'PENDING' | 'SUBMITTED' | 'APPROVED' | 'REJECTED'
 
+export type PaymentMode = 'MILESTONE' | 'TASK'
+
 export interface VendorQuote {
   id: number
   quotedPrice: string
   estimatedHours: string | null
+  hourlyRate: string | null
+  paymentMode: PaymentMode
   peopleCount: number | null
   status: QuoteStatus
   version: number
@@ -16,11 +20,13 @@ export interface VendorQuote {
   vendorId: number
   projectId: number | null
   taskId: number | null
+  milestoneId: number | null
   submittedById: number
   reviewedById: number | null
   vendor: { id: number; name: string }
   project: { id: number; name: string } | null
   task: { id: number; name: string } | null
+  milestone: { id: number; name: string } | null
   submittedBy: { id: number; name: string }
   reviewedBy: { id: number; name: string } | null
 }

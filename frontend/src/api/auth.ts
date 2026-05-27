@@ -4,9 +4,12 @@ export interface User {
   id: number
   email: string
   name: string
-  auth_provider: 'local' | 'google'
+  jobTitle: string | null
+  authProvider: 'LOCAL' | 'GOOGLE'
   roles: string[]
-  is_active: boolean
+  isActive: boolean
+  vendor: { id: number; name: string } | null
+  client: { id: number; name: string } | null
 }
 
 export const authApi = {
@@ -21,4 +24,7 @@ export const authApi = {
 
   me: () =>
     api.get<User>('/auth/me/'),
+
+  updateProfile: (data: { name?: string; email?: string; jobTitle?: string; newPassword?: string; currentPassword?: string }) =>
+    api.patch<User>('/auth/profile', data),
 }

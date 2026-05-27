@@ -2,10 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
 import { UpdateMilestoneDto } from './dto/update-milestone.dto';
+import { InvoicesService } from '../invoices/invoices.service';
 
 @Injectable()
 export class MilestonesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private invoicesService: InvoicesService,
+  ) {}
 
   findAll(projectId: number) {
     return this.prisma.milestone.findMany({
@@ -32,13 +36,21 @@ export class MilestonesService {
   }
 
   async update(projectId: number, id: number, dto: UpdateMilestoneDto) {
-    await this.findOne(projectId, id);
+    const existing = await this.findOne(projectId, id);
     const { dueDate, ...rest } = dto;
     const data: any = { ...rest };
     if (dueDate !== undefined) data.dueDate = new Date(dueDate);
     if (rest.status === 'COMPLETED') data.completedAt = new Date();
     else if (rest.status === 'PENDING') data.completedAt = null;
-    return this.prisma.milestone.update({ where: { id }, data });
+
+    const updated = await this.prisma.milestone.update({ where: { id }, data });
+
+    // Auto-generate vendor invoices when milestone is completed
+    if (rest.status === 'COMPLETED' && existing.status !== 'COMPLETED') {
+      await this.invoicesService.autoGenerateForMilestone(id, projectId);
+    }
+
+    return updated;
   }
 
   async remove(projectId: number, id: number) {

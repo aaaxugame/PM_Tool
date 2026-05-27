@@ -6,13 +6,16 @@ import Modal from '../../components/Modal'
 
 const STATUS_COLORS: Record<InvoiceStatus, string> = {
   DRAFT: 'bg-gray-100 text-gray-600',
+  SUBMITTED: 'bg-blue-50 text-blue-700',
   SENT: 'bg-yellow-50 text-yellow-700',
+  APPROVED: 'bg-teal-50 text-teal-700',
+  REJECTED: 'bg-red-50 text-red-600',
   PAID: 'bg-green-50 text-green-700',
-  OVERDUE: 'bg-red-50 text-red-600',
+  OVERDUE: 'bg-orange-50 text-orange-700',
 }
 
 const STATUS_NEXT: Partial<Record<InvoiceStatus, InvoiceStatus>> = {
-  DRAFT: 'SENT', SENT: 'PAID', OVERDUE: 'PAID',
+  DRAFT: 'SENT', SENT: 'PAID', OVERDUE: 'PAID', APPROVED: 'PAID',
 }
 
 const PAYMENT_METHODS = ['Bank Transfer', 'Credit Card', 'Cash', 'Check', 'PayPal', 'Other']
@@ -87,7 +90,7 @@ export default function InvoiceDetailPage() {
           <h1 className="text-2xl font-semibold text-gray-800">
             Invoice #{String(invoice.id).padStart(4, '0')}
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">{invoice.client.name}{invoice.project ? ` · ${invoice.project.name}` : ''}</p>
+          <p className="text-sm text-gray-500 mt-0.5">{invoice.client?.name ?? invoice.vendor?.name}{invoice.project ? ` · ${invoice.project.name}` : ''}</p>
         </div>
         <div className="flex items-center gap-2">
           {nextStatus && (
@@ -114,7 +117,7 @@ export default function InvoiceDetailPage() {
           { label: 'Invoice Date', value: invoice.invoiceDate.slice(0, 10) },
           { label: 'Due Date', value: invoice.dueDate.slice(0, 10) },
           { label: 'Tax Rate', value: `${parseFloat(invoice.taxRate).toFixed(1)}%` },
-          { label: 'Trigger', value: invoice.triggerType },
+          { label: 'Trigger', value: invoice.triggerType ?? '—' },
         ].map(card => (
           <div key={card.label} className="bg-white rounded-xl border border-gray-200 px-4 py-3">
             <p className="text-xs text-gray-500 mb-0.5">{card.label}</p>
