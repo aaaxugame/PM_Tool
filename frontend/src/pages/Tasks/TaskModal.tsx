@@ -11,6 +11,7 @@ interface Props {
   projects: Project[]
   users: User[]
   defaultProjectId?: number
+  defaultMilestoneId?: number
   onClose: () => void
   onSaved: () => void
 }
@@ -28,7 +29,7 @@ const EMPTY = {
   isBillable: true,
 }
 
-export default function TaskModal({ task, projects, users, defaultProjectId, onClose, onSaved }: Props) {
+export default function TaskModal({ task, projects, users, defaultProjectId, defaultMilestoneId, onClose, onSaved }: Props) {
   const { t } = useTranslation()
   const [form, setForm] = useState<typeof EMPTY>(EMPTY)
   const [milestones, setMilestones] = useState<Milestone[]>([])
@@ -48,10 +49,14 @@ export default function TaskModal({ task, projects, users, defaultProjectId, onC
         estimatedHours: task.estimatedHours ?? '',
         isBillable: task.isBillable,
       })
-    } else if (defaultProjectId) {
-      setForm(p => ({ ...p, projectId: defaultProjectId }))
+    } else {
+      setForm(p => ({
+        ...p,
+        projectId: defaultProjectId ?? 0,
+        milestoneId: defaultMilestoneId ?? 0,
+      }))
     }
-  }, [task, defaultProjectId])
+  }, [task, defaultProjectId, defaultMilestoneId])
 
   useEffect(() => {
     if (form.projectId) {
@@ -103,7 +108,7 @@ export default function TaskModal({ task, projects, users, defaultProjectId, onC
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Milestone</label>
             <select value={form.milestoneId} onChange={e => set('milestoneId', Number(e.target.value))}
-              disabled={!form.projectId || milestones.length === 0}
+              disabled={!form.projectId || milestones.length === 0 || !!defaultMilestoneId}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400">
               <option value={0}>— none —</option>
               {milestones.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}

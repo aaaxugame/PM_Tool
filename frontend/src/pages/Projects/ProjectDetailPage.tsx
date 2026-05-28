@@ -48,7 +48,7 @@ const QUOTE_EMPTY = {
 }
 const BUDGET_EMPTY = { amount: '', notes: '', taskId: 0 }
 
-type ActiveTab = 'milestones' | 'tasks' | 'quotes' | 'budget'
+type ActiveTab = 'work' | 'quotes' | 'budget'
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -63,7 +63,7 @@ export default function ProjectDetailPage() {
   const [quotes, setQuotes] = useState<VendorQuote[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<ActiveTab>('milestones')
+  const [activeTab, setActiveTab] = useState<ActiveTab>('work')
 
   // Milestone modal
   const [mModal, setMModal] = useState<null | 'create' | Milestone>(null)
@@ -72,6 +72,7 @@ export default function ProjectDetailPage() {
 
   // Task modal
   const [tModal, setTModal] = useState<null | 'create' | Task>(null)
+  const [tMilestoneId, setTMilestoneId] = useState<number | undefined>(undefined)
 
   // Quote modal
   const [qModal, setQModal] = useState<null | 'create' | VendorQuote>(null)
@@ -129,6 +130,10 @@ export default function ProjectDetailPage() {
   const handleTaskDelete = async (tid: number) => {
     if (!confirm('Delete this task?')) return
     await tasksApi.remove(tid); loadTasks()
+  }
+  const openTCreate = (milestoneId: number) => {
+    setTMilestoneId(milestoneId)
+    setTModal('create')
   }
 
   // ── Quote handlers ───────────────────────────────────────────────────────
@@ -194,9 +199,12 @@ export default function ProjectDetailPage() {
   if (loading) return <p className="text-sm text-gray-400">{t('common.loading')}</p>
   if (!project) return <p className="text-sm text-red-500">Project not found.</p>
 
+  const PRIORITY_DOT: Record<string, string> = {
+    LOW: 'bg-gray-300', MEDIUM: 'bg-blue-400', HIGH: 'bg-orange-400', URGENT: 'bg-red-500',
+  }
+
   const TABS: { key: ActiveTab; label: string }[] = [
-    { key: 'milestones', label: `Milestones (${project.milestones.length})` },
-    { key: 'tasks', label: `Tasks (${tasks.length})` },
+    { key: 'work', label: `Work (${project.milestones.length}M · ${tasks.length}T)` },
     { key: 'quotes', label: `Quotes (${quotes.length})` },
     { key: 'budget', label: `Budget (${budgets.length})` },
   ]
@@ -252,91 +260,104 @@ export default function ProjectDetailPage() {
           ))}
         </div>
 
-        {/* ── MILESTONES TAB ── */}
-        {activeTab === 'milestones' && (
-          <>
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-base font-semibold text-gray-700">Milestones</h2>
-              <button onClick={openMCreate} className="bg-blue-600 text-white text-sm px-3 py-1.5 rounded-lg hover:bg-blue-700">+ Add Milestone</button>
+        {/* ── WORK TAB (Project → Milestone → Task hierarchy) ── */}
+        {activeTab === 'work' && (() => {
+          const renderTaskRow = (task: Task) => (
+            <div key={task.id} className="flex items-center gap-3 px-4 py-2.5 pl-10 hover:bg-gray-50 border-t border-gray-100 first:border-t-0">
+              <span className={`w-2 h-2 rounded-full flex-shrink-0 ${PRIORITY_DOT[task.priority]}`} title={task.priority} />
+              <span className={`flex-1 text-sm min-w-0 truncate ${task.status === 'DONE' ? 'line-through text-gray-400' : 'text-gray-700'}`}>
+                {task.name}
+              </span>
+              <span className="text-xs text-gray-400 w-24 truncate flex-shrink-0 hidden md:block">{task.assignee?.name ?? '—'}</span>
+              <span className="text-xs text-gray-400 w-24 flex-shrink-0 hidden md:block">{task.dueDate ? task.dueDate.slice(0, 10) : '—'}</span>
+              <button onClick={() => handleTaskStatusCycle(task)}
+                className={`px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer whitespace-nowrap flex-shrink-0 ${TASK_STATUS_COLORS[task.status]}`}>
+                {task.status.replace('_', ' ')}
+              </button>
+              <div className="flex gap-2 flex-shrink-0">
+                <button onClick={() => setTModal(task)} className="text-blue-600 hover:underline text-xs">{t('common.edit')}</button>
+                <button onClick={() => handleTaskDelete(task.id)} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>
+              </div>
             </div>
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>{['Name', 'Due Date', 'Status', 'Triggers Invoice', ''].map(h => (
-                    <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
-                  ))}</tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {project.milestones.length === 0 ? (
-                    <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">{t('common.noData')}</td></tr>
-                  ) : project.milestones.map(m => (
-                    <tr key={m.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 font-medium text-gray-800">
-                        <span className={m.status === 'COMPLETED' ? 'line-through text-gray-400' : ''}>{m.name}</span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500">{m.dueDate ? m.dueDate.slice(0, 10) : '—'}</td>
-                      <td className="px-4 py-3">
-                        <button onClick={() => handleMComplete(m)} className={`px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer transition-colors ${
-                          m.status === 'COMPLETED' ? 'bg-blue-50 text-blue-700 hover:bg-blue-100' : 'bg-gray-100 text-gray-600 hover:bg-green-50 hover:text-green-700'
-                        }`}>{m.status}</button>
-                      </td>
-                      <td className="px-4 py-3">
-                        {m.triggersInvoice ? <span className="px-2 py-0.5 bg-purple-50 text-purple-700 rounded text-xs">Yes</span> : <span className="text-gray-400 text-xs">—</span>}
-                      </td>
-                      <td className="px-4 py-3 text-right space-x-2">
-                        <button onClick={() => openMEdit(m)} className="text-blue-600 hover:underline text-xs">{t('common.edit')}</button>
-                        <button onClick={() => handleMDelete(m.id)} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+          )
 
-        {/* ── TASKS TAB ── */}
-        {activeTab === 'tasks' && (
-          <>
-            <div className="flex justify-between items-center mb-3">
-              <h2 className="text-base font-semibold text-gray-700">Tasks</h2>
-              <button onClick={() => setTModal('create')} className="bg-blue-600 text-white text-sm px-3 py-1.5 rounded-lg hover:bg-blue-700">+ Add Task</button>
-            </div>
-            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>{['Task', 'Milestone', 'Assignee', 'Priority', 'Due Date', 'Status', ''].map(h => (
-                    <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
-                  ))}</tr>
-                </thead>
-                <tbody className="divide-y divide-gray-100">
-                  {tasks.length === 0 ? (
-                    <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">{t('common.noData')}</td></tr>
-                  ) : tasks.map(task => (
-                    <tr key={task.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3">
-                        <span className={`font-medium text-gray-800 ${task.status === 'DONE' ? 'line-through text-gray-400' : ''}`}>{task.name}</span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-400 text-xs">{task.milestone?.name ?? '—'}</td>
-                      <td className="px-4 py-3 text-gray-500">{task.assignee?.name ?? '—'}</td>
-                      <td className="px-4 py-3"><span className={`text-xs font-semibold ${PRIORITY_COLORS[task.priority]}`}>{task.priority}</span></td>
-                      <td className="px-4 py-3 text-gray-500">{task.dueDate ? task.dueDate.slice(0, 10) : '—'}</td>
-                      <td className="px-4 py-3">
-                        <button onClick={() => handleTaskStatusCycle(task)} className={`px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer ${TASK_STATUS_COLORS[task.status]}`}>
-                          {task.status.replace('_', ' ')}
-                        </button>
-                      </td>
-                      <td className="px-4 py-3 text-right space-x-2">
-                        <button onClick={() => setTModal(task)} className="text-blue-600 hover:underline text-xs">{t('common.edit')}</button>
-                        <button onClick={() => handleTaskDelete(task.id)} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
-        )}
+          return (
+            <>
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-base font-semibold text-gray-700">Work Plan</h2>
+                <button onClick={openMCreate} className="bg-blue-600 text-white text-sm px-3 py-1.5 rounded-lg hover:bg-blue-700">
+                  + Add Milestone
+                </button>
+              </div>
+
+              {project.milestones.length === 0 ? (
+                <div className="bg-white rounded-xl border border-dashed border-gray-300 py-12 text-center">
+                  <p className="text-gray-400 text-sm mb-3">No milestones yet — add one to start building your work plan.</p>
+                  <button onClick={openMCreate} className="text-blue-600 text-sm hover:underline">+ Add Milestone</button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {project.milestones.map(m => {
+                    const mTasks = tasks.filter(t => t.milestoneId === m.id)
+                    const doneCount = mTasks.filter(t => t.status === 'DONE').length
+                    return (
+                      <div key={m.id} className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                        {/* Milestone header */}
+                        <div className={`flex items-center justify-between px-4 py-3 ${m.status === 'COMPLETED' ? 'bg-green-50' : 'bg-gray-50'}`}>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <button onClick={() => handleMComplete(m)} title="Toggle complete"
+                              className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
+                                m.status === 'COMPLETED'
+                                  ? 'bg-green-500 border-green-500 text-white'
+                                  : 'border-gray-400 hover:border-green-500'
+                              }`}>
+                              {m.status === 'COMPLETED' && <span className="text-xs leading-none">✓</span>}
+                            </button>
+                            <span className={`font-semibold text-sm ${m.status === 'COMPLETED' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
+                              {m.name}
+                            </span>
+                            {m.dueDate && (
+                              <span className="text-xs text-gray-400 flex-shrink-0">{m.dueDate.slice(0, 10)}</span>
+                            )}
+                            {m.triggersInvoice && (
+                              <span className="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded text-xs flex-shrink-0">💰 Invoice</span>
+                            )}
+                            <span className="text-xs text-gray-400 flex-shrink-0">{doneCount}/{mTasks.length} done</span>
+                          </div>
+                          <div className="flex items-center gap-3 flex-shrink-0">
+                            <button onClick={() => openMEdit(m)} className="text-blue-600 hover:underline text-xs">{t('common.edit')}</button>
+                            <button onClick={() => handleMDelete(m.id)} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>
+                          </div>
+                        </div>
+
+                        {/* Tasks nested under this milestone */}
+                        {mTasks.map(renderTaskRow)}
+
+                        {/* Add task row */}
+                        <div className={`px-10 py-2 ${mTasks.length > 0 ? 'border-t border-gray-100' : ''}`}>
+                          <button onClick={() => openTCreate(m.id)}
+                            className="text-blue-500 text-xs hover:text-blue-700 hover:underline">
+                            + Add Task
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  {/* Unassigned tasks (no milestone) */}
+                  {tasks.filter(t => !t.milestoneId).length > 0 && (
+                    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+                      <div className="flex items-center justify-between px-4 py-3 bg-gray-50">
+                        <span className="font-semibold text-sm text-gray-500">Unassigned Tasks</span>
+                      </div>
+                      {tasks.filter(t => !t.milestoneId).map(renderTaskRow)}
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
+          )
+        })()}
 
         {/* ── QUOTES TAB ── */}
         {activeTab === 'quotes' && (
@@ -503,8 +524,9 @@ export default function ProjectDetailPage() {
           projects={[project]}
           users={users}
           defaultProjectId={projectId}
-          onClose={() => setTModal(null)}
-          onSaved={() => { loadTasks(); setTModal(null) }}
+          defaultMilestoneId={tModal === 'create' ? tMilestoneId : undefined}
+          onClose={() => { setTModal(null); setTMilestoneId(undefined) }}
+          onSaved={() => { loadTasks(); setTModal(null); setTMilestoneId(undefined) }}
         />
       )}
 
