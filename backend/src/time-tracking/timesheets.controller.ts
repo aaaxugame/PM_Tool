@@ -17,6 +17,13 @@ export class TimesheetsController {
     return this.timesheetsService.findAll(req.user.id);
   }
 
+  @Get('pending')
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER')
+  findPending() {
+    return this.timesheetsService.findAllSubmitted();
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     return this.timesheetsService.findOne(id, req.user.id);
@@ -35,13 +42,6 @@ export class TimesheetsController {
   @Delete(':id')
   remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     return this.timesheetsService.remove(id, req.user.id);
-  }
-
-  @Get('pending')
-  @UseGuards(RolesGuard)
-  @Roles('SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER')
-  findPending() {
-    return this.timesheetsService.findAllSubmitted();
   }
 
   @Post(':id/approve')
