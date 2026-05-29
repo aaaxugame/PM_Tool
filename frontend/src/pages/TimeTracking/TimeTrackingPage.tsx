@@ -9,6 +9,7 @@ import {
 import { projectsApi, type Project } from '../../api/projects'
 import Modal from '../../components/Modal'
 import TimeEntryModal from './TimeEntryModal'
+import { useAuth } from '../../store/authContext'
 
 const TS_STATUS_COLORS: Record<TimesheetStatus, string> = {
   DRAFT: 'bg-gray-100 text-gray-600',
@@ -20,10 +21,13 @@ const TS_STATUS_COLORS: Record<TimesheetStatus, string> = {
 export default function TimeTrackingPage() {
   const { t } = useTranslation()
   const { pathname } = useLocation()
+  const { hasRole } = useAuth()
   const [tab, setTab] = useState<'entries' | 'timesheets'>(
     pathname === '/timesheets' ? 'timesheets' : 'entries'
   )
   const [projects, setProjects] = useState<Project[]>([])
+
+  const isReviewer = hasRole('SUPER_ADMIN') || hasRole('ADMIN') || hasRole('ACCOUNT_MANAGER') || hasRole('PROJECT_MANAGER')
 
   // Time entries state
   const [entries, setEntries] = useState<TimeEntry[]>([])
@@ -47,6 +51,13 @@ export default function TimeTrackingPage() {
   const [tsForm, setTsForm] = useState({ periodStart: '', periodEnd: '' })
   const [tsSaving, setTsSaving] = useState(false)
 
+  // Review queue state (reviewer roles only)
+  const [pendingTimesheets, setPendingTimesheets] = useState<Timesheet[]>([])
+  const [pendingLoading, setPendingLoading] = useState(false)
+  const [rejectTarget, setRejectTarget] = useState<Timesheet | null>(null)
+  const [rejectReason, setRejectReason] = useState('')
+  const [reviewSaving, setReviewSaving] = useState(false)
+
   useEffect(() => {
     projectsApi.list().then(r => setProjects(r.data))
   }, [])
@@ -65,8 +76,19 @@ export default function TimeTrackingPage() {
     timesheetsApi.list().then(r => setTimesheets(r.data)).finally(() => setTsLoading(false))
   }
 
+  const loadPending = () => {
+    if (!isReviewer) return
+    setPendingLoading(true)
+    timesheetsApi.listPending().then(r => setPendingTimesheets(r.data)).finally(() => setPendingLoading(false))
+  }
+
   useEffect(() => { loadEntries() }, [projectFilter, fromDate, toDate])
-  useEffect(() => { if (tab === 'timesheets') loadTimesheets() }, [tab])
+  useEffect(() => {
+    if (tab === 'timesheets') {
+      loadTimesheets()
+      loadPending()
+    }
+  }, [tab])
 
   // Timer logic
   const startTimer = () => {
@@ -110,6 +132,25 @@ export default function TimeTrackingPage() {
     if (!confirm('Delete this timesheet?')) return
     await timesheetsApi.remove(ts.id)
     loadTimesheets()
+  }
+
+  const handleApprove = async (ts: Timesheet) => {
+    setReviewSaving(true)
+    try {
+      await timesheetsApi.approve(ts.id)
+      loadPending()
+    } finally { setReviewSaving(false) }
+  }
+
+  const handleReject = async () => {
+    if (!rejectTarget || !rejectReason.trim()) return
+    setReviewSaving(true)
+    try {
+      await timesheetsApi.reject(rejectTarget.id, rejectReason.trim())
+      setRejectTarget(null)
+      setRejectReason('')
+      loadPending()
+    } finally { setReviewSaving(false) }
   }
 
   const handleCreateTs = async () => {
@@ -242,8 +283,66 @@ export default function TimeTrackingPage() {
       {/* ── TIMESHEETS TAB ── */}
       {tab === 'timesheets' && (
         <>
+          {/* ── REVIEW QUEUE (reviewer roles only) ── */}
+          {isReviewer && (
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Pending Review</h2>
+                {pendingTimesheets.length > 0 && (
+                  <span className="px-2 py-0.5 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">
+                    {pendingTimesheets.length}
+                  </span>
+                )}
+              </div>
+              {pendingLoading ? (
+                <p className="text-sm text-gray-400">{t('common.loading')}</p>
+              ) : pendingTimesheets.length === 0 ? (
+                <p className="text-sm text-gray-400 italic">No timesheets awaiting review.</p>
+              ) : (
+                <div className="bg-white rounded-xl border border-yellow-200 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-yellow-50 border-b border-yellow-100">
+                      <tr>
+                        {['Employee', 'Period', 'Entries', ''].map(h => (
+                          <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {pendingTimesheets.map(ts => (
+                        <tr key={ts.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-gray-700 font-medium">{ts.user?.name ?? '—'}</td>
+                          <td className="px-4 py-3 text-gray-600">
+                            {dateFromIso(ts.periodStart)} — {dateFromIso(ts.periodEnd)}
+                          </td>
+                          <td className="px-4 py-3 text-gray-500 text-center">{ts._count.timeEntries}</td>
+                          <td className="px-4 py-3 text-right space-x-3">
+                            <button
+                              onClick={() => handleApprove(ts)}
+                              disabled={reviewSaving}
+                              className="text-xs text-green-600 hover:underline disabled:opacity-50"
+                            >
+                              Approve
+                            </button>
+                            <button
+                              onClick={() => { setRejectTarget(ts); setRejectReason('') }}
+                              disabled={reviewSaving}
+                              className="text-xs text-red-500 hover:underline disabled:opacity-50"
+                            >
+                              Reject
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex justify-between items-center mb-4">
-            <span className="text-sm text-gray-500">{timesheets.length} timesheet(s)</span>
+            <span className="text-sm text-gray-500">{isReviewer ? 'My Timesheets' : `${timesheets.length} timesheet(s)`}</span>
             <button onClick={() => setTsModal(true)} className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700">
               + New Timesheet
             </button>
@@ -305,6 +404,39 @@ export default function TimeTrackingPage() {
           onClose={() => { setEntryModal(null); setTimerPrefill(undefined) }}
           onSaved={() => { loadEntries(); setEntryModal(null); setTimerPrefill(undefined) }}
         />
+      )}
+
+      {/* Reject Timesheet modal */}
+      {rejectTarget && (
+        <Modal title="Reject Timesheet" onClose={() => setRejectTarget(null)}>
+          <p className="text-sm text-gray-600 mb-3">
+            Rejecting timesheet for <span className="font-medium">{rejectTarget.user?.name}</span>
+            {' '}({dateFromIso(rejectTarget.periodStart)} — {dateFromIso(rejectTarget.periodEnd)})
+          </p>
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">Rejection Reason *</label>
+            <textarea
+              value={rejectReason}
+              onChange={e => setRejectReason(e.target.value)}
+              rows={3}
+              placeholder="Explain why this timesheet is being rejected..."
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-red-400 resize-none"
+            />
+          </div>
+          <div className="flex justify-end gap-2 mt-5">
+            <button onClick={() => setRejectTarget(null)}
+              className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+              {t('common.cancel')}
+            </button>
+            <button
+              onClick={handleReject}
+              disabled={reviewSaving || !rejectReason.trim()}
+              className="px-4 py-2 text-sm bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50"
+            >
+              {reviewSaving ? t('common.loading') : 'Reject Timesheet'}
+            </button>
+          </div>
+        </Modal>
       )}
 
       {/* New Timesheet modal */}

@@ -5,6 +5,8 @@ import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
 import { InvoiceStatus, InvoiceType } from '@prisma/client';
+import { Roles } from '../common/decorators/roles.decorator';
+import { RolesGuard } from '../common/guards/roles.guard';
 
 @Controller('invoices')
 @UseGuards(AuthGuard('jwt'))
@@ -54,11 +56,15 @@ export class InvoicesController {
   }
 
   @Post(':id/approve')
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER', 'CLIENT')
   approve(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     return this.invoicesService.approve(id, req.user.id);
   }
 
   @Post(':id/reject')
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER')
   reject(
     @Param('id', ParseIntPipe) id: number,
     @Body('rejectionNote') rejectionNote: string,

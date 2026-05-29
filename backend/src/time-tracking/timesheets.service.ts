@@ -19,6 +19,18 @@ export class TimesheetsService {
     });
   }
 
+  findAllSubmitted() {
+    return this.prisma.timesheet.findMany({
+      where: { status: 'SUBMITTED' },
+      include: {
+        _count: { select: { timeEntries: true } },
+        user: { select: { id: true, name: true } },
+        reviewedBy: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
   async findOne(id: number, userId: number) {
     const ts = await this.prisma.timesheet.findFirst({
       where: { id, userId },
@@ -47,12 +59,15 @@ export class TimesheetsService {
     });
   }
 
-  async update(id: number, dto: UpdateTimesheetDto, userId: number, reviewerId?: number) {
+  async update(id: number, dto: UpdateTimesheetDto, userId: number) {
     const ts = await this.findOne(id, userId);
+
+    if (dto.status === 'APPROVED' || dto.status === 'REJECTED') {
+      throw new BadRequestException('Use the dedicated approve/reject endpoints');
+    }
 
     const VALID_TRANSITIONS: Partial<Record<TimesheetStatus, TimesheetStatus[]>> = {
       DRAFT: ['SUBMITTED'],
-      SUBMITTED: ['APPROVED', 'REJECTED'],
       REJECTED: ['DRAFT'],
     };
 
@@ -65,12 +80,31 @@ export class TimesheetsService {
 
     return this.prisma.timesheet.update({
       where: { id },
-      data: {
-        ...dto,
-        ...(dto.status === 'APPROVED' || dto.status === 'REJECTED'
-          ? { reviewedById: reviewerId }
-          : {}),
-      },
+      data: dto,
+    });
+  }
+
+  async approve(id: number, reviewerId: number) {
+    const ts = await this.prisma.timesheet.findUnique({ where: { id } });
+    if (!ts) throw new NotFoundException(`Timesheet ${id} not found`);
+    if (ts.status !== 'SUBMITTED') {
+      throw new BadRequestException(`Cannot approve a timesheet in ${ts.status} status`);
+    }
+    return this.prisma.timesheet.update({
+      where: { id },
+      data: { status: 'APPROVED', reviewedById: reviewerId },
+    });
+  }
+
+  async reject(id: number, reviewerId: number, rejectionReason: string) {
+    const ts = await this.prisma.timesheet.findUnique({ where: { id } });
+    if (!ts) throw new NotFoundException(`Timesheet ${id} not found`);
+    if (ts.status !== 'SUBMITTED') {
+      throw new BadRequestException(`Cannot reject a timesheet in ${ts.status} status`);
+    }
+    return this.prisma.timesheet.update({
+      where: { id },
+      data: { status: 'REJECTED', reviewedById: reviewerId, rejectionReason },
     });
   }
 

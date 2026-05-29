@@ -29,6 +29,7 @@ export interface Timesheet {
   rejectionReason: string | null
   userId: number
   createdAt: string
+  user?: { id: number; name: string }
   reviewedBy: { id: number; name: string } | null
   _count: { timeEntries: number }
 }
@@ -49,10 +50,14 @@ export const timeEntriesApi = {
 
 export const timesheetsApi = {
   list: () => api.get<Timesheet[]>('/timesheets'),
+  listPending: () => api.get<Timesheet[]>('/timesheets/pending'),
   get: (id: number) => api.get<Timesheet & { timeEntries: TimeEntry[] }>(`/timesheets/${id}`),
   create: (data: { periodStart: string; periodEnd: string }) => api.post<Timesheet>('/timesheets', data),
   update: (id: number, data: { status?: TimesheetStatus; rejectionReason?: string }) =>
     api.patch<Timesheet>(`/timesheets/${id}`, data),
+  approve: (id: number) => api.post<Timesheet>(`/timesheets/${id}/approve`, {}),
+  reject: (id: number, rejectionReason: string) =>
+    api.post<Timesheet>(`/timesheets/${id}/reject`, { rejectionReason }),
   remove: (id: number) => api.delete(`/timesheets/${id}`),
 }
 
