@@ -3,6 +3,10 @@ import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../store/authContext'
 import { dashboardApi, type DashboardStats } from '../../api/dashboard'
+import VendorDashboard from './VendorDashboard'
+import PMDashboard from './PMDashboard'
+import AMDashboard from './AMDashboard'
+import ClientDashboard from './ClientDashboard'
 
 const PROJECT_STATUS_COLORS: Record<string, string> = {
   DRAFT: 'bg-gray-100 text-gray-600', ACTIVE: 'bg-green-50 text-green-700',
@@ -14,7 +18,7 @@ const INVOICE_STATUS_COLORS: Record<string, string> = {
   PAID: 'bg-green-50 text-green-700', OVERDUE: 'bg-red-50 text-red-600',
 }
 
-export default function DashboardPage() {
+function GenericDashboard() {
   const { t } = useTranslation()
   const { user } = useAuth()
   const navigate = useNavigate()
@@ -127,7 +131,7 @@ export default function DashboardPage() {
                   {stats.recentInvoices.map(inv => (
                     <tr key={inv.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/invoices/${inv.id}`)}>
                       <td className="px-4 py-3">
-                        <p className="font-medium text-gray-800">#{String(inv.id).padStart(4, '0')} · {inv.client?.name ?? inv.vendor?.name}</p>
+                        <p className="font-medium text-gray-800">#{String(inv.id).padStart(4, '0')} · {inv.client?.name}</p>
                         <p className="text-xs text-gray-400">Due {inv.dueDate.slice(0, 10)}</p>
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -148,4 +152,72 @@ export default function DashboardPage() {
       )}
     </div>
   )
+}
+
+export default function DashboardPage() {
+  const { t } = useTranslation()
+  const { user } = useAuth()
+
+  if (!user) return null
+
+  const roles = user.roles
+
+  // Vendor / Contractor
+  if (roles.includes('VENDOR_CONTACT') || roles.includes('CONTRACTOR')) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-800">{t('dashboard.title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('dashboard.welcomeBack')}, {user.name}</p>
+        </div>
+        <VendorDashboard />
+      </div>
+    )
+  }
+
+  // Client
+  if (roles.includes('CLIENT')) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-800">{t('dashboard.title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('dashboard.welcomeBack')}, {user.name}</p>
+        </div>
+        <ClientDashboard />
+      </div>
+    )
+  }
+
+  // Account Manager / Admin / Super Admin
+  if (
+    roles.includes('ACCOUNT_MANAGER') ||
+    roles.includes('ADMIN') ||
+    roles.includes('SUPER_ADMIN')
+  ) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-800">{t('dashboard.title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('dashboard.welcomeBack')}, {user.name}</p>
+        </div>
+        <AMDashboard />
+      </div>
+    )
+  }
+
+  // Project Manager (without AM/Admin)
+  if (roles.includes('PROJECT_MANAGER')) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-800">{t('dashboard.title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('dashboard.welcomeBack')}, {user.name}</p>
+        </div>
+        <PMDashboard />
+      </div>
+    )
+  }
+
+  // Fallback: TEAM_MEMBER and others
+  return <GenericDashboard />
 }

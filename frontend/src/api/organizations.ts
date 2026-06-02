@@ -53,8 +53,15 @@ export const vendorsApi = {
   remove: (id: number) => api.delete(`/organizations/vendors/${id}`),
 }
 
+export interface SimpleUser {
+  id: number
+  name: string
+  email: string
+}
+
 export const usersApi = {
   list: () => api.get<User[]>('/users'),
+  listByRole: (role: string) => api.get<SimpleUser[]>(`/users?role=${role}`),
   get: (id: number) => api.get<User>(`/users/${id}`),
   create: (data: any) => api.post<User>('/users', data),
   update: (id: number, data: any) => api.patch<User>(`/users/${id}`, data),

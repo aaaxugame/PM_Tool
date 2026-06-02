@@ -1,17 +1,49 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, ParseIntPipe, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, ParseIntPipe, UseGuards, Req, ForbiddenException } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { ProjectStatus } from '@prisma/client';
 
 @Controller('projects')
 @UseGuards(AuthGuard('jwt'))
 export class ProjectsController {
   constructor(private projectsService: ProjectsService) {}
 
+  @Get('mine')
+  findMine(@Req() req: any) {
+    return this.projectsService.findMine(req.user.id);
+  }
+
+  @Get('vendor')
+  findForVendor(@Req() req: any, @Query('archived') archived?: string) {
+    const vendorId = req.user.vendor?.id;
+    if (!vendorId) throw new ForbiddenException('Not a vendor user');
+    return this.projectsService.findForVendor(vendorId, archived === 'true');
+  }
+
+  @Get('client')
+  findForClient(@Req() req: any) {
+    const clientId = req.user.client?.id;
+    if (!clientId) throw new ForbiddenException('Not a client user');
+    return this.projectsService.findForClient(clientId);
+  }
+
   @Get()
-  findAll() {
-    return this.projectsService.findAll();
+  findAll(
+    @Query('status') status?: ProjectStatus,
+    @Query('pmId') pmId?: string,
+    @Query('amId') amId?: string,
+    @Query('clientId') clientId?: string,
+    @Query('vendorId') vendorId?: string,
+  ) {
+    return this.projectsService.findAll({
+      status,
+      pmId: pmId ? parseInt(pmId, 10) : undefined,
+      amId: amId ? parseInt(amId, 10) : undefined,
+      clientId: clientId ? parseInt(clientId, 10) : undefined,
+      vendorId: vendorId ? parseInt(vendorId, 10) : undefined,
+    });
   }
 
   @Get(':id')
@@ -25,8 +57,8 @@ export class ProjectsController {
   }
 
   @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProjectDto) {
-    return this.projectsService.update(id, dto);
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateProjectDto, @Req() req: any) {
+    return this.projectsService.update(id, dto, req.user.id);
   }
 
   @Delete(':id')

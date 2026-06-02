@@ -37,4 +37,28 @@ export class DashboardController {
       to,
     });
   }
+
+  @Get('vendor')
+  getVendorDashboard(@Req() req: any) {
+    const vendorId = req.user.vendor?.id;
+    if (!vendorId) throw new Error('Not a vendor user');
+    return this.dashboardService.getVendorDashboard(vendorId);
+  }
+
+  @Get('pm')
+  getPMDashboard(@Req() req: any) {
+    return this.dashboardService.getPMDashboard(req.user.id);
+  }
+
+  @Get('am')
+  getAMDashboard(@Req() req: any) {
+    return this.dashboardService.getAMDashboard(req.user.id);
+  }
+
+  @Get('client')
+  getClientDashboard(@Req() req: any) {
+    const clientId = req.user.client?.id;
+    if (!clientId) throw new Error('Not a client user');
+    return this.dashboardService.getClientDashboard(clientId);
+  }
 }

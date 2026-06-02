@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Patch, Delete, Body, Param, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Body, Param, Query, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { UsersAdminService } from './users-admin.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -9,7 +9,8 @@ export class UsersController {
   constructor(private usersAdminService: UsersAdminService) {}
 
   @Get()
-  findAll() {
+  findAll(@Query('role') role?: string) {
+    if (role) return this.usersAdminService.findByRole(role);
     return this.usersAdminService.findAll();
   }
 

@@ -124,15 +124,20 @@ model Vendor {
 // ─── 3. Projects ─────────────────────────────────────────────────────────────
 
 model Project {
-  id            Int           @id @default(autoincrement())
-  name          String
-  description   String?
-  status        ProjectStatus @default(DRAFT)
-  priority      Priority      @default(MEDIUM)
-  billingMethod BillingMethod @default(HOURLY)
-  startDate     DateTime?
-  endDate       DateTime?
-  createdAt     DateTime      @default(now())
+  id              Int             @id @default(autoincrement())
+  name            String
+  description     String?
+  status          ProjectStatus   @default(DRAFT)
+  approvalStatus  ProjectApproval @default(PENDING)
+  priority        Priority        @default(MEDIUM)
+  billingMethod   BillingMethod   @default(HOURLY)
+  startDate       DateTime?
+  endDate         DateTime?
+  proposedCost    Decimal?        @db.Decimal(12, 2)
+  estimatedHours  Decimal?        @db.Decimal(8, 2)
+  proposedWorkers Int?
+  hourlyRate      Decimal?        @db.Decimal(10, 2)
+  createdAt       DateTime        @default(now())
 
   client   Client @relation(fields: [clientId], references: [id])
   clientId Int
@@ -159,12 +164,19 @@ enum ProjectStatus {
   ON_HOLD
   COMPLETED
   CANCELLED
+  ARCHIVED
 }
 
 enum BillingMethod {
   FIXED
   HOURLY
   MIXED
+}
+
+enum ProjectApproval {
+  PENDING
+  APPROVED
+  REJECTED
 }
 
 model ProjectAssignment {

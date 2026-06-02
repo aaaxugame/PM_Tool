@@ -42,6 +42,59 @@ export interface InvoiceReport {
   }[]
 }
 
+export interface VendorDashboard {
+  vendor: { id: number; name: string; contactEmail: string | null; contactPhone: string | null } | null
+  totalProjects: number
+  approvalDist: Record<string, number>
+  healthDist: Record<string, number>
+  totalContractValue: number
+  invoicedAmount: number
+  paidAmount: number
+  outstandingAmount: number
+  pendingQuotes: number
+  recentInvoices: { id: number; status: string; total: string; dueDate: string; invoiceDate: string }[]
+}
+
+export interface PMDashboard {
+  projectCount: number
+  statusDist: Record<string, number>
+  healthDist: Record<string, number>
+  taskHealth: Record<string, number>
+  upcomingMilestones: { id: number; name: string; dueDate: string; triggersInvoice: boolean; project: { id: number; name: string } }[]
+  overdueTasks: { id: number; name: string; dueDate: string; status: string; project: { id: number; name: string } }[]
+  hoursThisWeek: string
+  pendingTimesheets: number
+  budgetUtilization: { projectId: number; projectName: string; estimatedHours: number; loggedHours: number }[]
+}
+
+export interface AMDashboard {
+  totalProjects: number
+  activeProjects: number
+  totalClients: number
+  totalContractValue: number
+  revenue: { totalBilled: number; totalCollected: number; outstanding: number }
+  byClient: { clientId: number; clientName: string; totalProjects: number; activeProjects: number; totalValue: number }[]
+  actionableInvoices: { id: number; status: string; total: number; client: { id: number; name: string } | null; dueDate: string }[]
+  upcomingMilestoneTriggers: { id: number; name: string; dueDate: string; project: { id: number; name: string } }[]
+  pendingQuotes: number
+  pendingApprovals: number
+}
+
+export interface ClientDashboard {
+  projectCards: {
+    id: number; name: string; status: string; approvalStatus: string
+    pct: number; totalTasks: number; doneTasks: number
+    startDate: string | null; endDate: string | null
+    pm: { id: number; name: string } | null
+    am: { id: number; name: string } | null
+  }[]
+  billing: { totalContracted: number; totalInvoiced: number; totalPaid: number; outstanding: number }
+  openInvoices: { id: number; status: string; total: number; dueDate: string; invoiceDate: string }[]
+  upcomingMilestones: { id: number; name: string; dueDate: string; triggersInvoice: boolean; project: { id: number; name: string } }[]
+  recentActivity: { id: number; date: string; durationMinutes: number; description: string | null; user: { id: number; name: string }; project: { id: number; name: string } | null; task: { id: number; name: string } | null }[]
+  teamMembers: { id: number; name: string }[]
+}
+
 export const dashboardApi = {
   stats: () => api.get<DashboardStats>('/dashboard/stats'),
   timeReport: (filters?: { projectId?: number; from?: string; to?: string }) => {
@@ -60,4 +113,8 @@ export const dashboardApi = {
     const qs = params.toString()
     return api.get<InvoiceReport>(`/dashboard/invoice-report${qs ? `?${qs}` : ''}`)
   },
+  vendorDashboard: () => api.get<VendorDashboard>('/dashboard/vendor'),
+  pmDashboard: () => api.get<PMDashboard>('/dashboard/pm'),
+  amDashboard: () => api.get<AMDashboard>('/dashboard/am'),
+  clientDashboard: () => api.get<ClientDashboard>('/dashboard/client'),
 }

@@ -17,6 +17,15 @@ export class UsersAdminService {
     return users.map(this.format);
   }
 
+  async findByRole(roleName: string) {
+    const users = await this.prisma.user.findMany({
+      where: { userRoles: { some: { role: { name: roleName as any } } }, isActive: true },
+      select: { id: true, name: true, email: true },
+      orderBy: { name: 'asc' },
+    });
+    return users;
+  }
+
   async findOne(id: number) {
     const user = await this.prisma.user.findUnique({ where: { id }, include: USER_INCLUDE });
     if (!user) throw new NotFoundException('User not found');

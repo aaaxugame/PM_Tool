@@ -1,6 +1,6 @@
 import api from './client'
 
-export type ProjectStatus = 'DRAFT' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'CANCELLED'
+export type ProjectStatus = 'DRAFT' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'CANCELLED' | 'ARCHIVED'
 export type BillingMethod = 'FIXED' | 'HOURLY' | 'MIXED'
 export type MilestoneStatus = 'PENDING' | 'COMPLETED'
 export type ProjectPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
@@ -39,8 +39,29 @@ export interface Milestone {
   projectId: number
 }
 
+export interface ProjectFilters {
+  status?: ProjectStatus
+  pmId?: number
+  amId?: number
+  clientId?: number
+  vendorId?: number
+}
+
 export const projectsApi = {
-  list: () => api.get<Project[]>('/projects'),
+  list: (filters?: ProjectFilters) => {
+    const params = new URLSearchParams()
+    if (filters?.status) params.set('status', filters.status)
+    if (filters?.pmId) params.set('pmId', String(filters.pmId))
+    if (filters?.amId) params.set('amId', String(filters.amId))
+    if (filters?.clientId) params.set('clientId', String(filters.clientId))
+    if (filters?.vendorId) params.set('vendorId', String(filters.vendorId))
+    const qs = params.toString()
+    return api.get<Project[]>(qs ? `/projects?${qs}` : '/projects')
+  },
+  listMine: () => api.get<Project[]>('/projects/mine'),
+  listVendor: (archived?: boolean) =>
+    api.get<Project[]>(archived ? '/projects/vendor?archived=true' : '/projects/vendor'),
+  listClient: () => api.get<Project[]>('/projects/client'),
   get: (id: number) => api.get<ProjectDetail>(`/projects/${id}`),
   create: (data: Record<string, unknown>) => api.post<Project>('/projects', data),
   update: (id: number, data: Record<string, unknown>) => api.patch<Project>(`/projects/${id}`, data),
