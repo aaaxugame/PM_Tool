@@ -407,6 +407,7 @@ model TimeEntry {
   durationMinutes Int
   description     String?
   isBillable      Boolean  @default(true)
+  isBilled        Boolean  @default(false)
   isLocked        Boolean  @default(false)
   createdAt       DateTime @default(now())
 
@@ -418,6 +419,8 @@ model TimeEntry {
   projectId   Int
   task        Task?      @relation(fields: [taskId], references: [id])
   taskId      Int?
+
+  invoiceLineItems InvoiceLineItem[]
 
   @@map("time_entries")
 }
@@ -500,19 +503,29 @@ enum InvoiceStatus {
   OVERDUE
 }
 
-model InvoiceLineItem {
-  id          Int      @id @default(autoincrement())
-  description String
-  quantity    Decimal  @db.Decimal(8, 2)
-  unitPrice   Decimal  @db.Decimal(10, 2)
-  amount      Decimal  @db.Decimal(12, 2)
+enum LineItemType {
+  HOURLY
+  FIXED
+  EXPENSE
+  ADJUSTMENT
+}
 
-  invoice     Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+model InvoiceLineItem {
+  id          Int          @id @default(autoincrement())
+  description String
+  quantity    Decimal      @db.Decimal(8, 2)
+  unitPrice   Decimal      @db.Decimal(10, 2)
+  amount      Decimal      @db.Decimal(12, 2)
+  lineItemType LineItemType @default(FIXED)
+
+  invoice     Invoice    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   invoiceId   Int
-  task        Task?     @relation(fields: [taskId], references: [id])
+  task        Task?      @relation(fields: [taskId], references: [id])
   taskId      Int?
   milestone   Milestone? @relation(fields: [milestoneId], references: [id])
   milestoneId Int?
+  timeEntry   TimeEntry? @relation(fields: [timeEntryId], references: [id])
+  timeEntryId Int?       @unique
 
   @@map("invoice_line_items")
 }

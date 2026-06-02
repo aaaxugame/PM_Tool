@@ -49,14 +49,25 @@ export class TimesheetsService {
     return ts;
   }
 
-  create(dto: CreateTimesheetDto, userId: number) {
-    return this.prisma.timesheet.create({
-      data: {
-        periodStart: new Date(dto.periodStart),
-        periodEnd: new Date(dto.periodEnd),
-        userId,
-      },
+  async create(dto: CreateTimesheetDto, userId: number) {
+    const periodStart = new Date(dto.periodStart);
+    const periodEnd = new Date(dto.periodEnd);
+
+    const timesheet = await this.prisma.timesheet.create({
+      data: { periodStart, periodEnd, userId },
     });
+
+    // Auto-link unassigned entries that fall within this period
+    await this.prisma.timeEntry.updateMany({
+      where: {
+        userId,
+        timesheetId: null,
+        date: { gte: periodStart, lte: periodEnd },
+      },
+      data: { timesheetId: timesheet.id },
+    });
+
+    return timesheet;
   }
 
   async update(id: number, dto: UpdateTimesheetDto, userId: number) {
