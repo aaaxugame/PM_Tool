@@ -73,9 +73,7 @@ export class ProjectsService {
           { vendorQuotes: { some: { vendorId } } },
           { requestingVendorId: vendorId },
         ],
-        status: archived
-          ? ProjectStatus.ARCHIVED
-          : { in: [ProjectStatus.ACTIVE, ProjectStatus.ON_HOLD, ProjectStatus.COMPLETED] },
+        status: archived ? ProjectStatus.ARCHIVED : { not: ProjectStatus.ARCHIVED },
       },
       include: PROJECT_INCLUDE,
       orderBy: { createdAt: 'desc' },
