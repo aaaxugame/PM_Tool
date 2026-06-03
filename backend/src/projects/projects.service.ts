@@ -73,6 +73,7 @@ export class ProjectsService {
           { vendorQuotes: { some: { vendorId } } },
           { requestingVendorId: vendorId },
         ],
+        approvalStatus: 'APPROVED',
         status: archived ? ProjectStatus.ARCHIVED : { not: ProjectStatus.ARCHIVED },
       },
       include: PROJECT_INCLUDE,
@@ -82,7 +83,11 @@ export class ProjectsService {
 
   findVendorRequests(vendorId: number) {
     return this.prisma.project.findMany({
-      where: { requestingVendorId: vendorId },
+      where: {
+        requestingVendorId: vendorId,
+        approvalStatus: { not: 'APPROVED' },
+        status: { not: ProjectStatus.ARCHIVED },
+      },
       include: PROJECT_INCLUDE,
       orderBy: { createdAt: 'desc' },
     });

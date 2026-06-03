@@ -860,10 +860,10 @@ export default function ProjectsPage() {
         <ProjectTable
           projects={projects}
           loading={loading}
-          onEdit={canManage || isVendor ? openEdit : undefined}
-          onDelete={canManage ? handleDelete : undefined}
-          showActions={canManage || isVendor}
-          showApprovalStatus={isVendor}
+          onEdit={canManage || (isVendor && activeTab === 1) ? openEdit : undefined}
+          onDelete={canManage || (isVendor && activeTab === 1) ? handleDelete : undefined}
+          showActions={canManage || (isVendor && activeTab === 1)}
+          showApprovalStatus={isVendor && activeTab === 1}
         />
       )}
 

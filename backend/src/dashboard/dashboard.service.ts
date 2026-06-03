@@ -122,7 +122,7 @@ export class DashboardService {
     const now = new Date();
     const in30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    const [vendor, projects, invoices, pendingQuotes] = await Promise.all([
+    const [vendor, projects, invoices, pendingQuotes, approvedQuotes] = await Promise.all([
       this.prisma.vendor.findUnique({
         where: { id: vendorId },
         select: { id: true, name: true, contactEmail: true, contactPhone: true },
@@ -139,15 +139,18 @@ export class DashboardService {
         include: { payments: { select: { amount: true } } },
       }),
       this.prisma.vendorQuote.count({ where: { vendorId, status: 'SUBMITTED' as any } }),
+      this.prisma.vendorQuote.findMany({
+        where: { vendorId, status: 'APPROVED' as any },
+        select: { quotedPrice: true },
+      }),
     ]);
 
     const approvalDist: Record<string, number> = { PENDING: 0, APPROVED: 0, REJECTED: 0 };
     const healthDist: Record<string, number> = { NOT_STARTED: 0, ON_TRACK: 0, AT_RISK: 0, DELAYED: 0 };
-    let totalContractValue = 0;
+    const totalContractValue = approvedQuotes.reduce((s, q) => s + Number(q.quotedPrice), 0);
 
     for (const p of projects) {
       approvalDist[p.approvalStatus] = (approvalDist[p.approvalStatus] ?? 0) + 1;
-      totalContractValue += Number(p.proposedCost ?? 0);
       if (p.status === 'DRAFT' || (p._count.tasks === 0)) healthDist.NOT_STARTED++;
       else if (p.endDate && p.endDate < now && !['COMPLETED', 'CANCELLED', 'ARCHIVED'].includes(p.status)) healthDist.DELAYED++;
       else if (p.tasks.length > 0) healthDist.AT_RISK++;
