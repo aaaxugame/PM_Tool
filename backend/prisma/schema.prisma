@@ -175,7 +175,8 @@ enum ProjectStatus {
 
 enum BillingMethod {
   FIXED
-  HOURLY
+  TIME_AND_MATERIALS
+  MILESTONE
   MIXED
 }
 

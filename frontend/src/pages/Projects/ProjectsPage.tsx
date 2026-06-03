@@ -287,7 +287,7 @@ const PM_EMPTY = {
   description: '',
   status: 'DRAFT' as ProjectStatus,
   priority: 'MEDIUM' as ProjectPriority,
-  billingMethod: 'HOURLY' as BillingMethod,
+  billingMethod: 'TIME_AND_MATERIALS' as BillingMethod,
   riskLevel: '' as RiskLevel | '',
   clientId: 0,
   vendorId: 0,
@@ -329,7 +329,7 @@ function ProjectCreationModal({
     description: project?.description ?? '',
     status: project?.status ?? 'DRAFT' as ProjectStatus,
     priority: project?.priority ?? 'MEDIUM' as ProjectPriority,
-    billingMethod: project?.billingMethod ?? 'HOURLY' as BillingMethod,
+    billingMethod: project?.billingMethod ?? 'TIME_AND_MATERIALS' as BillingMethod,
     riskLevel: (project?.riskLevel ?? '') as RiskLevel | '',
     clientId: project?.clientId ?? 0,
     vendorId: project?.requestingVendorId ?? 0,
@@ -471,7 +471,9 @@ function ProjectCreationModal({
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Billing Model *</label>
               <select value={form.billingMethod} onChange={e => set('billingMethod', e.target.value)} className={inp}>
-                {(['HOURLY', 'FIXED', 'MIXED'] as BillingMethod[]).map(m => <option key={m} value={m}>{m}</option>)}
+                {(['TIME_AND_MATERIALS', 'FIXED', 'MILESTONE', 'MIXED'] as BillingMethod[]).map(m => (
+                  <option key={m} value={m}>{m.replace(/_/g, ' ')}</option>
+                ))}
               </select>
             </div>
             <div>
@@ -630,7 +632,7 @@ function ProjectTable({
                   <span>{t(`projects.priority_${p.priority ?? 'MEDIUM'}`)}</span>
                 </span>
               </td>
-              <td className="px-4 py-3 text-gray-500">{p.billingMethod}</td>
+              <td className="px-4 py-3 text-gray-500">{p.billingMethod.replace(/_/g, ' ')}</td>
               <td className="px-4 py-3 text-gray-500">{p.startDate ? p.startDate.slice(0, 10) : '—'}</td>
               <td className="px-4 py-3 text-gray-500">{p.endDate ? p.endDate.slice(0, 10) : '—'}</td>
               <td className="px-4 py-3 text-gray-500 text-center">{p._count.milestones}</td>

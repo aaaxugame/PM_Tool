@@ -1,7 +1,7 @@
 import api from './client'
 
 export type ProjectStatus = 'DRAFT' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'CANCELLED' | 'ARCHIVED'
-export type BillingMethod = 'FIXED' | 'HOURLY' | 'MIXED'
+export type BillingMethod = 'FIXED' | 'TIME_AND_MATERIALS' | 'MILESTONE' | 'MIXED'
 export type MilestoneStatus = 'PENDING' | 'COMPLETED'
 export type ProjectPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
 export type ProjectApproval = 'PENDING' | 'APPROVED' | 'REJECTED'
