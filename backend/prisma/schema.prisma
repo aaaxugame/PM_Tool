@@ -43,6 +43,7 @@ model User {
   reviewedTimesheets         Timesheet[]         @relation("TimesheetReviewedBy")
   billingRates               BillingRate[]
   approvedInvoices           Invoice[]    @relation("InvoiceApprovedBy")
+  documents                  Document[]
 
   @@map("users")
 }
@@ -160,6 +161,7 @@ model Project {
   budgets       Budget[]
   invoices      Invoice[]
   billingRates  BillingRate[]
+  documents     Document[]
 
   @@map("projects")
 }
@@ -278,6 +280,7 @@ model Milestone {
   invoices        Invoice[]
   invoiceLineItems InvoiceLineItem[]
   vendorQuotes    VendorQuote[]
+  documents       Document[]
 
   @@map("milestones")
 }
@@ -519,6 +522,7 @@ model Invoice {
 
   lineItems InvoiceLineItem[]
   payments  Payment[]
+  documents Document[]
 
   @@map("invoices")
 }
@@ -558,6 +562,7 @@ model InvoiceLineItem {
   milestoneId Int?
   timeEntry   TimeEntry? @relation(fields: [timeEntryId], references: [id])
   timeEntryId Int?       @unique
+  documents   Document[]
 
   @@map("invoice_line_items")
 }
@@ -576,4 +581,29 @@ model Payment {
   recordedById Int
 
   @@map("payments")
+}
+
+// ─── Documents (file attachments) ────────────────────────────────────────────
+
+model Document {
+  id          Int      @id @default(autoincrement())
+  filename    String
+  storedName  String
+  mimeType    String
+  size        Int
+  url         String
+  createdAt   DateTime @default(now())
+
+  uploadedBy        User             @relation(fields: [uploadedById], references: [id])
+  uploadedById      Int
+  project           Project?         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId         Int?
+  invoice           Invoice?         @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  invoiceId         Int?
+  invoiceLineItem   InvoiceLineItem? @relation(fields: [invoiceLineItemId], references: [id], onDelete: Cascade)
+  invoiceLineItemId Int?
+  milestone         Milestone?       @relation(fields: [milestoneId], references: [id], onDelete: Cascade)
+  milestoneId       Int?
+
+  @@map("documents")
 }

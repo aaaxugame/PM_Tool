@@ -8,6 +8,7 @@ import { vendorQuotesApi, budgetsApi, type VendorQuote, type Budget, type QuoteS
 import { vendorsApi, type Vendor } from '../../api/organizations'
 import Modal from '../../components/Modal'
 import TaskModal from '../Tasks/TaskModal'
+import DocumentManager from '../../components/DocumentManager'
 
 // ── Color maps ──────────────────────────────────────────────────────────────
 const STATUS_COLORS: Record<string, string> = {
@@ -48,7 +49,7 @@ const QUOTE_EMPTY = {
 }
 const BUDGET_EMPTY = { amount: '', notes: '', taskId: 0 }
 
-type ActiveTab = 'work' | 'quotes' | 'budget'
+type ActiveTab = 'work' | 'quotes' | 'budget' | 'documents'
 
 export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -207,6 +208,7 @@ export default function ProjectDetailPage() {
     { key: 'work', label: `Work (${project.milestones.length}M · ${tasks.length}T)` },
     { key: 'quotes', label: `Quotes (${quotes.length})` },
     { key: 'budget', label: `Budget (${budgets.length})` },
+    { key: 'documents', label: 'Documents' },
   ]
 
   return (
@@ -470,6 +472,14 @@ export default function ProjectDetailPage() {
               </table>
             </div>
           </>
+        )}
+
+        {/* ── DOCUMENTS TAB ── */}
+        {activeTab === 'documents' && (
+          <div className="bg-white rounded-xl border border-gray-200 p-5">
+            <h2 className="text-base font-semibold text-gray-700 mb-4">Project Documents</h2>
+            <DocumentManager filter={{ projectId }} />
+          </div>
         )}
       </div>
 

@@ -11,6 +11,7 @@ import { TimeTrackingModule } from './time-tracking/time-tracking.module';
 import { QuotesBudgetsModule } from './quotes-budgets/quotes-budgets.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { DashboardModule } from './dashboard/dashboard.module';
+import { DocumentsModule } from './documents/documents.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
     QuotesBudgetsModule,
     InvoicesModule,
     DashboardModule,
+    DocumentsModule,
   ],
 })
 export class AppModule {}
