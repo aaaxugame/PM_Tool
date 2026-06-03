@@ -59,12 +59,39 @@ export class InvoicesController {
 
   @Get()
   findAll(
+    @Req() req: any,
     @Query('clientId')    clientId?:    string,
     @Query('projectId')   projectId?:   string,
     @Query('vendorId')    vendorId?:    string,
     @Query('status')      status?:      InvoiceStatus,
     @Query('invoiceType') invoiceType?: InvoiceType,
   ) {
+    const roles: string[] = req.user.roles ?? [];
+
+    // CLIENT users can only see their own client invoices — enforce server-side
+    if (roles.includes('CLIENT')) {
+      const scopedClientId = req.user.client?.id;
+      if (!scopedClientId) return [];
+      return this.invoicesService.findAll({
+        clientId:    scopedClientId,
+        invoiceType: 'CLIENT',
+        projectId:   projectId ? Number(projectId) : undefined,
+        status,
+      });
+    }
+
+    // VENDOR users can only see their own vendor invoices
+    if (roles.includes('VENDOR_CONTACT') || roles.includes('CONTRACTOR')) {
+      const scopedVendorId = req.user.vendor?.id;
+      if (!scopedVendorId) return [];
+      return this.invoicesService.findAll({
+        vendorId:    scopedVendorId,
+        invoiceType: 'VENDOR',
+        projectId:   projectId ? Number(projectId) : undefined,
+        status,
+      });
+    }
+
     return this.invoicesService.findAll({
       clientId:    clientId    ? Number(clientId)    : undefined,
       projectId:   projectId   ? Number(projectId)   : undefined,

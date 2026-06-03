@@ -2,6 +2,7 @@
   "nav": {
     "dashboard": "儀表板",
     "projects": "專案",
+    "myProjects": "我的專案",
     "tasks": "任務",
     "timeTracking": "時間追蹤",
     "timesheets": "工時表",

@@ -195,7 +195,14 @@ export default function InvoiceDetailPage() {
               Reject
             </button>
           )}
-          {/* Client invoice advance */}
+          {/* Client: approve SENT invoice */}
+          {!isVendorInv && invoice.status === 'SENT' && isClient && (
+            <button onClick={handleApprove}
+              className="bg-teal-600 text-white text-sm px-3 py-1.5 rounded-lg hover:bg-teal-700">
+              Approve Invoice
+            </button>
+          )}
+          {/* Client invoice advance (PM/AM) */}
           {!isVendorInv && nextStatus && (isAM || isPM) && (
             <button onClick={() => handleStatusAdvance(nextStatus)}
               className="bg-blue-600 text-white text-sm px-3 py-1.5 rounded-lg hover:bg-blue-700">
