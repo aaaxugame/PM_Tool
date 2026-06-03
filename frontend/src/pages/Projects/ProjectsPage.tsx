@@ -248,7 +248,7 @@ function ProjectRequestModal({
       </div>
 
       {!isApproved && (
-        <div className="flex justify-end gap-2 mt-5">
+        <div className="sticky bottom-0 bg-white border-t border-gray-100 -mx-6 px-6 py-4 mt-5 flex justify-end gap-2">
           <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
             Cancel
           </button>
@@ -269,7 +269,7 @@ function ProjectRequestModal({
         </div>
       )}
       {isApproved && (
-        <div className="flex justify-end mt-5">
+        <div className="sticky bottom-0 bg-white border-t border-gray-100 -mx-6 px-6 py-4 mt-5 flex justify-end">
           <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
             Close
           </button>
@@ -531,7 +531,7 @@ function ProjectCreationModal({
         </div>
       </div>
 
-      <div className="flex justify-end gap-2 mt-5">
+      <div className="sticky bottom-0 bg-white border-t border-gray-100 -mx-6 px-6 py-4 mt-5 flex justify-end gap-2">
         <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
           Cancel
         </button>

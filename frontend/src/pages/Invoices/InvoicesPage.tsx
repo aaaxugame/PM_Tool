@@ -25,7 +25,8 @@ export default function InvoicesPage() {
   const { user, hasRole } = useAuth()
   const navigate = useNavigate()
 
-  const [tab, setTab] = useState<InvoiceType>('CLIENT')
+  const isVendorRole = hasRole('CONTRACTOR') || hasRole('VENDOR_CONTACT')
+  const [tab, setTab] = useState<InvoiceType>(isVendorRole ? 'VENDOR' : 'CLIENT')
   const [invoices, setInvoices] = useState<Invoice[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [vendors, setVendors] = useState<Vendor[]>([])
@@ -46,6 +47,9 @@ export default function InvoicesPage() {
   const isAM = hasRole('ACCOUNT_MANAGER') || hasRole('ADMIN') || hasRole('SUPER_ADMIN')
   const isVendor = hasRole('CONTRACTOR') || hasRole('VENDOR_CONTACT')
   const isClient = hasRole('CLIENT')
+
+  // Only show tabs relevant to the role
+  const visibleTabs: InvoiceType[] = isVendor ? ['VENDOR'] : isClient ? ['CLIENT'] : ['CLIENT', 'VENDOR']
 
   const load = () =>
     invoicesApi.list({ invoiceType: tab, ...(statusFilter ? { status: statusFilter as InvoiceStatus } : {}) })
@@ -144,19 +148,22 @@ export default function InvoicesPage() {
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-6">
-        {(['CLIENT', 'VENDOR'] as InvoiceType[]).map(type => (
-          <button key={type} onClick={() => setTab(type)}
-            className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
-              tab === type
-                ? 'border-blue-600 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700'
-            }`}>
-            {type === 'CLIENT' ? `🧾 ${t('invoices.clientInvoices')}` : `🔧 ${t('invoices.vendorInvoices')}`}
-          </button>
-        ))}
-      </div>
+      {/* Tabs — only show tabs relevant to this role */}
+      {visibleTabs.length > 1 && (
+        <div className="flex border-b border-gray-200 mb-6">
+          {visibleTabs.map(type => (
+            <button key={type} onClick={() => setTab(type)}
+              className={`px-5 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                tab === type
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700'
+              }`}>
+              {type === 'CLIENT' ? `🧾 ${t('invoices.clientInvoices')}` : `🔧 ${t('invoices.vendorInvoices')}`}
+            </button>
+          ))}
+        </div>
+      )}
+      {visibleTabs.length === 1 && <div className="mb-6" />}
 
       {loading ? (
         <p className="text-sm text-gray-400">{t('common.loading')}</p>
