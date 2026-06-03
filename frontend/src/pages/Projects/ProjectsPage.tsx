@@ -584,8 +584,7 @@ function ProjectTable({
             {[
               t('common.name'),
               t('projects.client'),
-              t('common.status'),
-              ...(showApprovalStatus ? ['Approval'] : []),
+              showApprovalStatus ? 'Approval' : t('common.status'),
               t('projects.priority'),
               t('projects.billingMethod'),
               t('projects.startDate'),
@@ -615,17 +614,16 @@ function ProjectTable({
               </td>
               <td className="px-4 py-3 text-gray-500">{p.client?.name ?? '—'}</td>
               <td className="px-4 py-3">
-                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[p.status]}`}>
-                  {p.status.replace('_', ' ')}
-                </span>
-              </td>
-              {showApprovalStatus && (
-                <td className="px-4 py-3">
+                {showApprovalStatus ? (
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${APPROVAL_COLORS[p.approvalStatus]}`}>
                     {p.approvalStatus}
                   </span>
-                </td>
-              )}
+                ) : (
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[p.status]}`}>
+                    {p.status.replace('_', ' ')}
+                  </span>
+                )}
+              </td>
               <td className="px-4 py-3">
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${PRIORITY_COLORS[p.priority ?? 'MEDIUM']}`}>
                   <span>{PRIORITY_ICON[p.priority ?? 'MEDIUM']}</span>
@@ -865,7 +863,7 @@ export default function ProjectsPage() {
           onEdit={canManage || isVendor ? openEdit : undefined}
           onDelete={canManage ? handleDelete : undefined}
           showActions={canManage || isVendor}
-          showApprovalStatus={isVendor && activeTab === 1}
+          showApprovalStatus={isVendor}
         />
       )}
 
