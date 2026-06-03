@@ -1,6 +1,6 @@
-import { IsInt, IsOptional, IsEnum, IsDateString, IsString, IsNumber, IsArray, ValidateNested, Min } from 'class-validator';
+import { IsInt, IsOptional, IsEnum, IsDateString, IsString, IsNumber, IsArray, ValidateNested, Min, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
-import { InvoiceStatus, TriggerType } from '@prisma/client';
+import { InvoiceStatus, TriggerType, LineItemType } from '@prisma/client';
 
 export class CreateLineItemDto {
   @IsString()
@@ -16,6 +16,10 @@ export class CreateLineItemDto {
   @Type(() => Number)
   unitPrice: number;
 
+  @IsEnum(LineItemType)
+  @IsOptional()
+  lineItemType?: LineItemType;
+
   @IsInt()
   @IsOptional()
   @Type(() => Number)
@@ -25,6 +29,20 @@ export class CreateLineItemDto {
   @IsOptional()
   @Type(() => Number)
   milestoneId?: number;
+
+  @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  timeEntryId?: number;
+
+  @IsString()
+  @IsOptional()
+  receiptNote?: string;
+
+  // frontend hint: lock quantity/unitPrice in edit UI
+  @IsBoolean()
+  @IsOptional()
+  locked?: boolean;
 }
 
 export class CreateInvoiceDto {
@@ -85,4 +103,9 @@ export class CreateInvoiceDto {
   @IsOptional()
   @Type(() => Number)
   vendorQuoteId?: number;
+
+  @IsInt()
+  @IsOptional()
+  @Type(() => Number)
+  parentInvoiceId?: number;
 }
