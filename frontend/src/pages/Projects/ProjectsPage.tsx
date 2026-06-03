@@ -47,6 +47,14 @@ const VENDOR_EMPTY = {
   requiredSkillSet: '',
   proposedCost: '',
   estimatedHours: '',
+  billingMethod: 'TIME_AND_MATERIALS' as BillingMethod,
+}
+
+const BILLING_METHOD_LABELS: Record<BillingMethod, string> = {
+  TIME_AND_MATERIALS: 'Time & Materials',
+  FIXED: 'Fixed Price',
+  MILESTONE: 'Milestone-Based',
+  MIXED: 'Mixed',
 }
 
 function ProjectRequestModal({
@@ -73,6 +81,7 @@ function ProjectRequestModal({
     requiredSkillSet: project?.requiredSkillSet ?? '',
     proposedCost: project?.proposedCost ?? '',
     estimatedHours: project?.estimatedHours ?? '',
+    billingMethod: (project?.billingMethod ?? 'TIME_AND_MATERIALS') as BillingMethod,
   })
   const [saving, setSaving] = useState(false)
 
@@ -91,6 +100,7 @@ function ProjectRequestModal({
         requiredSkillSet: form.requiredSkillSet || undefined,
         proposedCost: form.proposedCost || undefined,
         estimatedHours: form.estimatedHours || undefined,
+        billingMethod: form.billingMethod,
       }
       if (!isEditing) {
         payload.requestingVendorId = vendorId
@@ -218,7 +228,22 @@ function ProjectRequestModal({
         {/* Financial */}
         <div>
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Financial</h3>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Preferred Billing Model *</label>
+              <select
+                value={form.billingMethod}
+                onChange={e => set('billingMethod', e.target.value)}
+                disabled={isApproved}
+                className={fieldClass(isApproved)}
+              >
+                {(Object.entries(BILLING_METHOD_LABELS) as [BillingMethod, string][]).map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3 mt-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Estimated Cost ($)</label>
               <input
