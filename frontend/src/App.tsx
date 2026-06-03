@@ -11,6 +11,7 @@ import TimeTrackingPage from './pages/TimeTracking/TimeTrackingPage'
 import InvoicesPage from './pages/Invoices/InvoicesPage'
 import InvoiceDetailPage from './pages/Invoices/InvoiceDetailPage'
 import ReportsPage from './pages/Reports/ReportsPage'
+import FinancialsPage from './pages/Financials/FinancialsPage'
 import ProfilePage from './pages/Profile/ProfilePage'
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -41,6 +42,7 @@ function AppRoutes() {
         <Route path="invoices" element={<InvoicesPage />} />
         <Route path="invoices/:id" element={<InvoiceDetailPage />} />
         <Route path="reports" element={<ReportsPage />} />
+        <Route path="financials" element={<FinancialsPage />} />
         <Route path="admin" element={<AdminPage />} />
         <Route path="profile" element={<ProfilePage />} />
       </Route>

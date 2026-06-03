@@ -193,6 +193,33 @@ export default function InvoicesPage() {
         </div>
       </div>
 
+      {/* ── Review queue banner for PM/AM ── */}
+      {canReview && tab === 'VENDOR' && (() => {
+        const pending = invoices.filter(i => i.status === 'SUBMITTED')
+        if (pending.length === 0) return null
+        return (
+          <div className="mb-5 bg-blue-50 border border-blue-200 rounded-xl px-5 py-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">📋</span>
+              <div>
+                <p className="text-sm font-semibold text-blue-800">
+                  {pending.length} invoice{pending.length !== 1 ? 's' : ''} awaiting your review
+                </p>
+                <p className="text-xs text-blue-600 mt-0.5">
+                  Total: ${pending.reduce((s, i) => s + parseFloat(i.total), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => setStatusFilter('SUBMITTED')}
+              className="text-sm text-blue-700 font-medium bg-blue-100 hover:bg-blue-200 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Show only →
+            </button>
+          </div>
+        )
+      })()}
+
       {/* Tabs */}
       {visibleTabs.length > 1 && (
         <div className="flex border-b border-gray-200 mb-6">

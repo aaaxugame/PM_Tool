@@ -33,6 +33,7 @@ const NAV_SECTIONS = [
       { to: '/time-tracking', label: 'nav.timeTracking', icon: '⏱', roles: ['ADMIN', 'SUPER_ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER', 'TEAM_MEMBER', 'CONTRACTOR', 'VENDOR_CONTACT'] },
       { to: '/timesheets', label: 'nav.timesheets', icon: '📋', roles: ['ADMIN', 'SUPER_ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER', 'TEAM_MEMBER', 'CONTRACTOR', 'VENDOR_CONTACT'] },
       { to: '/invoices', label: 'nav.invoices', icon: '🧾' },
+      { to: '/financials', label: 'nav.financials', icon: '💰', roles: ['ADMIN', 'SUPER_ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER'] },
       { to: '/reports', label: 'nav.reports', icon: '📊', roles: ['ADMIN', 'SUPER_ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER'] },
     ],
   },
