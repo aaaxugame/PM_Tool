@@ -6,6 +6,8 @@ import { invoicesApi, type InvoiceDetail, type InvoiceStatus } from '../../api/i
 import Modal from '../../components/Modal'
 import VendorInvoiceModal from './VendorInvoiceModal'
 import DocumentManager from '../../components/DocumentManager'
+import InvoicePDF from '../../components/InvoicePDF'
+import { pdf } from '@react-pdf/renderer'
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT:              'bg-gray-100 text-gray-600',
@@ -54,6 +56,7 @@ export default function InvoiceDetailPage() {
 
   const [invoice, setInvoice]   = useState<InvoiceDetail | null>(null)
   const [loading, setLoading]   = useState(true)
+  const [pdfLoading, setPdfLoading] = useState(false)
   const [editModal, setEditModal] = useState(false)
   const [payModal, setPayModal]   = useState(false)
   const [payForm, setPayForm]     = useState<typeof PAYMENT_EMPTY>(PAYMENT_EMPTY)
@@ -104,6 +107,22 @@ export default function InvoiceDetailPage() {
   const handleReject = async () => {
     await invoicesApi.reject(invoiceId, rejectNote)
     setRejectModal(false); load()
+  }
+
+  const handleDownloadPDF = async () => {
+    if (!invoice) return
+    setPdfLoading(true)
+    try {
+      const blob = await pdf(<InvoicePDF invoice={invoice} />).toBlob()
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `invoice-${String(invoice.id).padStart(4, '0')}-v${invoice.version}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setPdfLoading(false)
+    }
   }
 
   if (loading) return <p className="text-sm text-gray-400">{t('common.loading')}</p>
@@ -216,6 +235,30 @@ export default function InvoiceDetailPage() {
               Record Payment
             </button>
           )}
+          {/* Download PDF — available to all roles */}
+          <button
+            onClick={handleDownloadPDF}
+            disabled={pdfLoading}
+            className="flex items-center gap-1.5 bg-white border border-gray-300 text-gray-700 text-sm px-3 py-1.5 rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors"
+          >
+            {pdfLoading ? (
+              <>
+                <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                Generating…
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17a7 7 0 0114 0" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 17H3a9 9 0 010-18h1.5" />
+                </svg>
+                Download PDF
+              </>
+            )}
+          </button>
           <span className={`px-3 py-1 rounded-full text-xs font-semibold ${STATUS_COLORS[invoice.status] ?? 'bg-gray-100 text-gray-600'}`}>
             {invoice.status.replace(/_/g, ' ')}
           </span>
