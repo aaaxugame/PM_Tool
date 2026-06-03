@@ -4,21 +4,33 @@ export type ProjectStatus = 'DRAFT' | 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'CANC
 export type BillingMethod = 'FIXED' | 'HOURLY' | 'MIXED'
 export type MilestoneStatus = 'PENDING' | 'COMPLETED'
 export type ProjectPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
+export type ProjectApproval = 'PENDING' | 'APPROVED' | 'REJECTED'
+export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH'
 
 export interface Project {
   id: number
   name: string
   description: string | null
   status: ProjectStatus
+  approvalStatus: ProjectApproval
   priority: ProjectPriority
   billingMethod: BillingMethod
   startDate: string | null
   endDate: string | null
-  clientId: number
+  clientId: number | null
   createdById: number
   createdAt: string
-  client: { id: number; name: string }
+  category: string | null
+  riskLevel: RiskLevel | null
+  requiredSkillSet: string | null
+  proposedCost: string | null
+  estimatedHours: string | null
+  proposedWorkers: number | null
+  requestingVendorId: number | null
+  client: { id: number; name: string } | null
   createdBy: { id: number; name: string }
+  requestingVendor: { id: number; name: string } | null
+  assignments: { assignmentRole: string; user: { id: number; name: string } }[]
   _count: { milestones: number; tasks: number }
 }
 
@@ -61,6 +73,7 @@ export const projectsApi = {
   listMine: () => api.get<Project[]>('/projects/mine'),
   listVendor: (archived?: boolean) =>
     api.get<Project[]>(archived ? '/projects/vendor?archived=true' : '/projects/vendor'),
+  listVendorRequests: () => api.get<Project[]>('/projects/vendor/requests'),
   listClient: () => api.get<Project[]>('/projects/client'),
   get: (id: number) => api.get<ProjectDetail>(`/projects/${id}`),
   create: (data: Record<string, unknown>) => api.post<Project>('/projects', data),

@@ -1,5 +1,5 @@
 import { IsString, IsOptional, IsEnum, IsInt, IsDateString, IsDecimal } from 'class-validator';
-import { ProjectStatus, BillingMethod, Priority, ProjectApproval } from '@prisma/client';
+import { ProjectStatus, BillingMethod, Priority, ProjectApproval, RiskLevel } from '@prisma/client';
 
 export class CreateProjectDto {
   @IsString()
@@ -8,6 +8,10 @@ export class CreateProjectDto {
   @IsString()
   @IsOptional()
   description?: string;
+
+  @IsString()
+  @IsOptional()
+  category?: string;
 
   @IsEnum(ProjectStatus)
   @IsOptional()
@@ -25,8 +29,13 @@ export class CreateProjectDto {
   @IsOptional()
   billingMethod?: BillingMethod;
 
+  @IsEnum(RiskLevel)
+  @IsOptional()
+  riskLevel?: RiskLevel;
+
   @IsInt()
-  clientId: number;
+  @IsOptional()
+  clientId?: number;
 
   @IsInt()
   @IsOptional()
@@ -35,6 +44,10 @@ export class CreateProjectDto {
   @IsInt()
   @IsOptional()
   amId?: number;
+
+  @IsInt()
+  @IsOptional()
+  requestingVendorId?: number;
 
   @IsDateString()
   @IsOptional()
@@ -55,6 +68,10 @@ export class CreateProjectDto {
   @IsInt()
   @IsOptional()
   proposedWorkers?: number;
+
+  @IsString()
+  @IsOptional()
+  requiredSkillSet?: string;
 
   @IsDecimal()
   @IsOptional()

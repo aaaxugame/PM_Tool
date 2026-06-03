@@ -7,6 +7,7 @@ import { ProjectStatus } from '@prisma/client';
 const PROJECT_INCLUDE = {
   client: { select: { id: true, name: true } },
   createdBy: { select: { id: true, name: true } },
+  requestingVendor: { select: { id: true, name: true } },
   assignments: {
     include: { user: { select: { id: true, name: true } } },
   },
@@ -68,9 +69,20 @@ export class ProjectsService {
   findForVendor(vendorId: number, archived: boolean) {
     return this.prisma.project.findMany({
       where: {
-        vendorQuotes: { some: { vendorId } },
+        OR: [
+          { vendorQuotes: { some: { vendorId } } },
+          { requestingVendorId: vendorId },
+        ],
         status: archived ? ProjectStatus.ARCHIVED : { not: ProjectStatus.ARCHIVED },
       },
+      include: PROJECT_INCLUDE,
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  findVendorRequests(vendorId: number) {
+    return this.prisma.project.findMany({
+      where: { requestingVendorId: vendorId },
       include: PROJECT_INCLUDE,
       orderBy: { createdAt: 'desc' },
     });
@@ -90,6 +102,7 @@ export class ProjectsService {
       include: {
         client: { select: { id: true, name: true } },
         createdBy: { select: { id: true, name: true } },
+        requestingVendor: { select: { id: true, name: true } },
         assignments: { include: { user: { select: { id: true, name: true } } } },
         milestones: { orderBy: { dueDate: 'asc' } },
         _count: { select: { tasks: true, timeEntries: true } },
@@ -100,7 +113,7 @@ export class ProjectsService {
   }
 
   async create(dto: CreateProjectDto, userId: number) {
-    const { startDate, endDate, pmId, amId, ...rest } = dto;
+    const { startDate, endDate, pmId, amId, clientId, ...rest } = dto;
 
     const assignmentData: any[] = [];
     if (pmId) assignmentData.push({ userId: pmId, assignmentRole: 'PROJECT_MANAGER', assignedById: userId });
@@ -109,18 +122,19 @@ export class ProjectsService {
     return this.prisma.project.create({
       data: {
         ...rest,
+        clientId: clientId ?? null,
         startDate: startDate ? new Date(startDate) : undefined,
         endDate: endDate ? new Date(endDate) : undefined,
         createdById: userId,
         ...(assignmentData.length ? { assignments: { create: assignmentData } } : {}),
-      },
+      } as any,
       include: PROJECT_INCLUDE,
     });
   }
 
   async update(id: number, dto: UpdateProjectDto, userId: number) {
     await this.findOne(id);
-    const { startDate, endDate, pmId, amId, ...rest } = dto;
+    const { startDate, endDate, pmId, amId, ...rest } = dto as any;
 
     const project = await this.prisma.project.update({
       where: { id },

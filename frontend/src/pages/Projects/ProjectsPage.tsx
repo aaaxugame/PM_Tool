@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { projectsApi, type Project, type ProjectStatus, type BillingMethod, type ProjectPriority, type ProjectFilters } from '../../api/projects'
+import { projectsApi, type Project, type ProjectStatus, type BillingMethod, type ProjectPriority, type RiskLevel, type ProjectFilters } from '../../api/projects'
 import { clientsApi, vendorsApi, usersApi, type Client, type Vendor, type SimpleUser } from '../../api/organizations'
 import { useAuth } from '../../store/authContext'
 import Modal from '../../components/Modal'
@@ -29,18 +29,532 @@ const PRIORITY_ICON: Record<ProjectPriority, string> = {
   URGENT: '⚠',
 }
 
-const EMPTY = {
+const APPROVAL_COLORS = {
+  PENDING: 'bg-yellow-50 text-yellow-700 border border-yellow-200',
+  APPROVED: 'bg-green-50 text-green-700 border border-green-200',
+  REJECTED: 'bg-red-50 text-red-600 border border-red-200',
+}
+
+// ─── Project Request Form (Vendor) ────────────────────────────────────────────
+
+const VENDOR_EMPTY = {
   name: '',
+  category: '',
+  description: '',
+  startDate: '',
+  endDate: '',
+  proposedWorkers: '',
+  requiredSkillSet: '',
+  proposedCost: '',
+  estimatedHours: '',
+}
+
+function ProjectRequestModal({
+  project,
+  vendorId,
+  onClose,
+  onSaved,
+}: {
+  project?: Project
+  vendorId: number
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const isApproved = project?.approvalStatus === 'APPROVED'
+  const isEditing = !!project
+
+  const [form, setForm] = useState({
+    name: project?.name ?? '',
+    category: project?.category ?? '',
+    description: project?.description ?? '',
+    startDate: project?.startDate ? project.startDate.slice(0, 10) : '',
+    endDate: project?.endDate ? project.endDate.slice(0, 10) : '',
+    proposedWorkers: project?.proposedWorkers?.toString() ?? '',
+    requiredSkillSet: project?.requiredSkillSet ?? '',
+    proposedCost: project?.proposedCost ?? '',
+    estimatedHours: project?.estimatedHours ?? '',
+  })
+  const [saving, setSaving] = useState(false)
+
+  const set = (key: string, val: string) => setForm(p => ({ ...p, [key]: val }))
+
+  const handleSave = async (submit: boolean) => {
+    setSaving(true)
+    try {
+      const payload: Record<string, unknown> = {
+        name: form.name,
+        description: form.description || undefined,
+        category: form.category || undefined,
+        startDate: form.startDate || undefined,
+        endDate: form.endDate || undefined,
+        proposedWorkers: form.proposedWorkers ? parseInt(form.proposedWorkers) : undefined,
+        requiredSkillSet: form.requiredSkillSet || undefined,
+        proposedCost: form.proposedCost || undefined,
+        estimatedHours: form.estimatedHours || undefined,
+      }
+      if (!isEditing) {
+        payload.requestingVendorId = vendorId
+        payload.approvalStatus = submit ? 'PENDING' : 'PENDING'
+        payload.status = submit ? 'ACTIVE' : 'DRAFT'
+      }
+      if (isEditing) {
+        await projectsApi.update(project.id, payload)
+      } else {
+        await projectsApi.create(payload)
+      }
+      onSaved()
+      onClose()
+    } finally { setSaving(false) }
+  }
+
+  const fieldClass = (locked: boolean) =>
+    `w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+      locked ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-300'
+    }`
+
+  return (
+    <Modal title={isEditing ? 'Edit Project Request' : 'New Project Request'} onClose={onClose}>
+      {isApproved && (
+        <div className="mb-4 px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-xs text-green-700">
+          This request has been approved. Fields are locked — contact your Project Manager to request changes.
+        </div>
+      )}
+
+      <div className="space-y-4">
+        {/* Basic Information */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Basic Information</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Project Name *</label>
+              <input
+                type="text"
+                value={form.name}
+                onChange={e => set('name', e.target.value)}
+                disabled={isApproved}
+                className={fieldClass(isApproved)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Project Type / Category</label>
+              <input
+                type="text"
+                value={form.category}
+                onChange={e => set('category', e.target.value)}
+                disabled={isApproved}
+                placeholder="e.g. Web Development, Data Migration…"
+                className={fieldClass(isApproved)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+              <textarea
+                value={form.description}
+                onChange={e => set('description', e.target.value)}
+                disabled={isApproved}
+                rows={3}
+                className={fieldClass(isApproved)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Proposed Timeline */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Proposed Timeline</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Proposed Start Date</label>
+              <input
+                type="date"
+                value={form.startDate}
+                onChange={e => set('startDate', e.target.value)}
+                disabled={isApproved}
+                className={fieldClass(isApproved)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Proposed End Date</label>
+              <input
+                type="date"
+                value={form.endDate}
+                onChange={e => set('endDate', e.target.value)}
+                disabled={isApproved}
+                className={fieldClass(isApproved)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Staffing */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Staffing</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Proposed Number of Workers</label>
+              <input
+                type="number"
+                min="1"
+                value={form.proposedWorkers}
+                onChange={e => set('proposedWorkers', e.target.value)}
+                disabled={isApproved}
+                className={fieldClass(isApproved)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Required Skill Set</label>
+              <input
+                type="text"
+                value={form.requiredSkillSet}
+                onChange={e => set('requiredSkillSet', e.target.value)}
+                disabled={isApproved}
+                placeholder="e.g. React, Node.js, AWS…"
+                className={fieldClass(isApproved)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Financial */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Financial</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Estimated Cost ($)</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={form.proposedCost}
+                onChange={e => set('proposedCost', e.target.value)}
+                disabled={isApproved}
+                className={fieldClass(isApproved)}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Estimated Hours</label>
+              <input
+                type="number"
+                min="0"
+                step="0.5"
+                value={form.estimatedHours}
+                onChange={e => set('estimatedHours', e.target.value)}
+                disabled={isApproved}
+                className={fieldClass(isApproved)}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {!isApproved && (
+        <div className="flex justify-end gap-2 mt-5">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+            Cancel
+          </button>
+          <button
+            onClick={() => handleSave(false)}
+            disabled={saving || !form.name}
+            className="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+          >
+            {saving ? 'Saving…' : 'Save Draft'}
+          </button>
+          <button
+            onClick={() => handleSave(true)}
+            disabled={saving || !form.name}
+            className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          >
+            {saving ? 'Saving…' : 'Submit Request'}
+          </button>
+        </div>
+      )}
+      {isApproved && (
+        <div className="flex justify-end mt-5">
+          <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+            Close
+          </button>
+        </div>
+      )}
+    </Modal>
+  )
+}
+
+// ─── Project Creation Form (PM / AM / Admin) ──────────────────────────────────
+
+const PM_EMPTY = {
+  name: '',
+  category: '',
   description: '',
   status: 'DRAFT' as ProjectStatus,
   priority: 'MEDIUM' as ProjectPriority,
   billingMethod: 'HOURLY' as BillingMethod,
+  riskLevel: '' as RiskLevel | '',
   clientId: 0,
+  vendorId: 0,
+  pmId: 0,
+  amId: 0,
   startDate: '',
   endDate: '',
+  proposedCost: '',
+  estimatedHours: '',
+  proposedWorkers: '',
+  requiredSkillSet: '',
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+function ProjectCreationModal({
+  project,
+  clients,
+  vendors,
+  pms,
+  ams,
+  onClose,
+  onSaved,
+}: {
+  project?: Project
+  clients: Client[]
+  vendors: Vendor[]
+  pms: SimpleUser[]
+  ams: SimpleUser[]
+  onClose: () => void
+  onSaved: () => void
+}) {
+  const isEditing = !!project
+
+  const getPmId = () => project?.assignments?.find(a => a.assignmentRole === 'PROJECT_MANAGER')?.user?.id ?? 0
+  const getAmId = () => project?.assignments?.find(a => a.assignmentRole === 'ACCOUNT_MANAGER')?.user?.id ?? 0
+
+  const [form, setForm] = useState({
+    name: project?.name ?? '',
+    category: project?.category ?? '',
+    description: project?.description ?? '',
+    status: project?.status ?? 'DRAFT' as ProjectStatus,
+    priority: project?.priority ?? 'MEDIUM' as ProjectPriority,
+    billingMethod: project?.billingMethod ?? 'HOURLY' as BillingMethod,
+    riskLevel: (project?.riskLevel ?? '') as RiskLevel | '',
+    clientId: project?.clientId ?? 0,
+    vendorId: project?.requestingVendorId ?? 0,
+    pmId: isEditing ? getPmId() : 0,
+    amId: isEditing ? getAmId() : 0,
+    startDate: project?.startDate ? project.startDate.slice(0, 10) : '',
+    endDate: project?.endDate ? project.endDate.slice(0, 10) : '',
+    proposedCost: project?.proposedCost ?? '',
+    estimatedHours: project?.estimatedHours ?? '',
+    proposedWorkers: project?.proposedWorkers?.toString() ?? '',
+    requiredSkillSet: project?.requiredSkillSet ?? '',
+  })
+  const [saving, setSaving] = useState(false)
+  const set = (key: string, val: unknown) => setForm(p => ({ ...p, [key]: val }))
+
+  const handleSave = async (draft: boolean) => {
+    setSaving(true)
+    try {
+      const payload: Record<string, unknown> = {
+        name: form.name,
+        description: form.description || undefined,
+        category: form.category || undefined,
+        status: draft ? 'DRAFT' : form.status,
+        priority: form.priority,
+        billingMethod: form.billingMethod,
+        riskLevel: form.riskLevel || undefined,
+        clientId: form.clientId || undefined,
+        pmId: form.pmId || undefined,
+        amId: form.amId || undefined,
+        startDate: form.startDate || undefined,
+        endDate: form.endDate || undefined,
+        proposedCost: form.proposedCost || undefined,
+        estimatedHours: form.estimatedHours || undefined,
+        proposedWorkers: form.proposedWorkers ? parseInt(form.proposedWorkers) : undefined,
+        requiredSkillSet: form.requiredSkillSet || undefined,
+      }
+      if (!isEditing) {
+        payload.approvalStatus = 'APPROVED'
+      }
+      if (isEditing) {
+        await projectsApi.update(project.id, payload)
+      } else {
+        await projectsApi.create(payload)
+      }
+      onSaved()
+      onClose()
+    } finally { setSaving(false) }
+  }
+
+  const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
+  const PRIORITIES: ProjectPriority[] = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
+  const RISK_LEVELS: RiskLevel[] = ['LOW', 'MEDIUM', 'HIGH']
+
+  return (
+    <Modal title={isEditing ? 'Edit Project' : 'Create Project'} onClose={onClose}>
+      <div className="space-y-5">
+
+        {/* Basic Information */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Basic Information</h3>
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Project Name *</label>
+              <input type="text" value={form.name} onChange={e => set('name', e.target.value)} className={inp} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Client</label>
+                <select value={form.clientId} onChange={e => set('clientId', Number(e.target.value))} className={inp}>
+                  <option value={0}>— select client —</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Vendor</label>
+                <select value={form.vendorId} onChange={e => set('vendorId', Number(e.target.value))} className={inp}>
+                  <option value={0}>— select vendor —</option>
+                  {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
+              <input
+                type="text"
+                value={form.category}
+                onChange={e => set('category', e.target.value)}
+                placeholder="e.g. Web Development, Data Migration…"
+                className={inp}
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+              <textarea value={form.description} onChange={e => set('description', e.target.value)} rows={2} className={inp} />
+            </div>
+          </div>
+        </div>
+
+        {/* Ownership */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Ownership</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Project Manager</label>
+              <select value={form.pmId} onChange={e => set('pmId', Number(e.target.value))} className={inp}>
+                <option value={0}>— select PM —</option>
+                {pms.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Account Manager</label>
+              <select value={form.amId} onChange={e => set('amId', Number(e.target.value))} className={inp}>
+                <option value={0}>— select AM —</option>
+                {ams.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Timeline */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Timeline</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Start Date</label>
+              <input type="date" value={form.startDate} onChange={e => set('startDate', e.target.value)} className={inp} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">End Date</label>
+              <input type="date" value={form.endDate} onChange={e => set('endDate', e.target.value)} className={inp} />
+            </div>
+          </div>
+        </div>
+
+        {/* Financial */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Financial</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Billing Model *</label>
+              <select value={form.billingMethod} onChange={e => set('billingMethod', e.target.value)} className={inp}>
+                {(['HOURLY', 'FIXED', 'MIXED'] as BillingMethod[]).map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Estimated Cost ($)</label>
+              <input type="number" min="0" step="0.01" value={form.proposedCost} onChange={e => set('proposedCost', e.target.value)} className={inp} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Estimated Hours</label>
+              <input type="number" min="0" step="0.5" value={form.estimatedHours} onChange={e => set('estimatedHours', e.target.value)} className={inp} />
+            </div>
+          </div>
+        </div>
+
+        {/* Resources */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Resources</h3>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Vendor Workers</label>
+              <input type="number" min="0" value={form.proposedWorkers} onChange={e => set('proposedWorkers', e.target.value)} className={inp} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Required Skill Set</label>
+              <input type="text" value={form.requiredSkillSet} onChange={e => set('requiredSkillSet', e.target.value)} placeholder="e.g. React, Node.js…" className={inp} />
+            </div>
+          </div>
+        </div>
+
+        {/* Project Settings */}
+        <div>
+          <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Project Settings</h3>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+              <select value={form.status} onChange={e => set('status', e.target.value)} className={inp}>
+                {(['DRAFT', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED', 'ARCHIVED'] as ProjectStatus[]).map(s => (
+                  <option key={s} value={s}>{s.replace('_', ' ')}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Priority</label>
+              <select value={form.priority} onChange={e => set('priority', e.target.value)} className={inp}>
+                {PRIORITIES.map(p => (
+                  <option key={p} value={p}>{PRIORITY_ICON[p]} {p}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Risk Level</label>
+              <select value={form.riskLevel} onChange={e => set('riskLevel', e.target.value)} className={inp}>
+                <option value="">— none —</option>
+                {RISK_LEVELS.map(r => <option key={r} value={r}>{r}</option>)}
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex justify-end gap-2 mt-5">
+        <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+          Cancel
+        </button>
+        <button
+          onClick={() => handleSave(true)}
+          disabled={saving || !form.name}
+          className="px-4 py-2 text-sm border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 disabled:opacity-50"
+        >
+          {saving ? 'Saving…' : 'Save Draft'}
+        </button>
+        <button
+          onClick={() => handleSave(false)}
+          disabled={saving || !form.name || !form.billingMethod}
+          className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+        >
+          {saving ? 'Saving…' : isEditing ? 'Save Changes' : 'Create Project'}
+        </button>
+      </div>
+    </Modal>
+  )
+}
+
+// ─── Project Table ────────────────────────────────────────────────────────────
 
 function ProjectTable({
   projects,
@@ -48,12 +562,14 @@ function ProjectTable({
   onEdit,
   onDelete,
   showActions,
+  showApprovalStatus,
 }: {
   projects: Project[]
   loading: boolean
   onEdit?: (p: Project) => void
   onDelete?: (id: number) => void
   showActions?: boolean
+  showApprovalStatus?: boolean
 }) {
   const { t } = useTranslation()
   const navigate = useNavigate()
@@ -69,6 +585,7 @@ function ProjectTable({
               t('common.name'),
               t('projects.client'),
               t('common.status'),
+              ...(showApprovalStatus ? ['Approval'] : []),
               t('projects.priority'),
               t('projects.billingMethod'),
               t('projects.startDate'),
@@ -84,7 +601,7 @@ function ProjectTable({
         <tbody className="divide-y divide-gray-100">
           {projects.length === 0 ? (
             <tr>
-              <td colSpan={showActions ? 10 : 9} className="px-4 py-8 text-center text-gray-400">
+              <td colSpan={10} className="px-4 py-8 text-center text-gray-400">
                 {t('common.noData')}
               </td>
             </tr>
@@ -96,12 +613,19 @@ function ProjectTable({
               >
                 {p.name}
               </td>
-              <td className="px-4 py-3 text-gray-500">{p.client.name}</td>
+              <td className="px-4 py-3 text-gray-500">{p.client?.name ?? '—'}</td>
               <td className="px-4 py-3">
                 <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[p.status]}`}>
                   {p.status.replace('_', ' ')}
                 </span>
               </td>
+              {showApprovalStatus && (
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${APPROVAL_COLORS[p.approvalStatus]}`}>
+                    {p.approvalStatus}
+                  </span>
+                </td>
+              )}
               <td className="px-4 py-3">
                 <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${PRIORITY_COLORS[p.priority ?? 'MEDIUM']}`}>
                   <span>{PRIORITY_ICON[p.priority ?? 'MEDIUM']}</span>
@@ -127,7 +651,7 @@ function ProjectTable({
   )
 }
 
-// ─── All Projects tab with filter bar ────────────────────────────────────────
+// ─── All Projects tab (PM / AM / Admin) with filter bar ───────────────────────
 
 function AllProjectsTab({
   onEdit,
@@ -164,7 +688,6 @@ function AllProjectsTab({
 
   return (
     <div className="space-y-4">
-      {/* Filter bar */}
       <div className="flex flex-wrap gap-3 bg-white border border-gray-200 rounded-xl px-4 py-3">
         <div className="flex items-center gap-2">
           <label className="text-xs font-medium text-gray-500 whitespace-nowrap">Project Manager</label>
@@ -211,10 +734,7 @@ function AllProjectsTab({
           </select>
         </div>
         {(filters.pmId || filters.amId || filters.clientId || filters.vendorId) && (
-          <button
-            onClick={() => setFilters({})}
-            className="text-xs text-gray-400 hover:text-gray-600 underline"
-          >
+          <button onClick={() => setFilters({})} className="text-xs text-gray-400 hover:text-gray-600 underline">
             Clear filters
           </button>
         )}
@@ -235,24 +755,25 @@ function AllProjectsTab({
 
 export default function ProjectsPage() {
   const { t } = useTranslation()
-  const { hasRole } = useAuth()
+  const { hasRole, user } = useAuth()
   const [activeTab, setActiveTab] = useState(0)
   const [projects, setProjects] = useState<Project[]>([])
   const [clients, setClients] = useState<Client[]>([])
+  const [vendors, setVendors] = useState<Vendor[]>([])
+  const [pms, setPms] = useState<SimpleUser[]>([])
+  const [ams, setAms] = useState<SimpleUser[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<null | 'create' | Project>(null)
-  const [form, setForm] = useState<typeof EMPTY>(EMPTY)
   const [saving, setSaving] = useState(false)
 
   const isVendor = hasRole('VENDOR_CONTACT') || hasRole('CONTRACTOR')
   const isClient = hasRole('CLIENT')
   const canManage = hasRole('ADMIN') || hasRole('SUPER_ADMIN') || hasRole('ACCOUNT_MANAGER') || hasRole('PROJECT_MANAGER')
 
-  // Tabs definition per view type
   const tabs = isClient
     ? [{ label: 'My Projects' }]
     : isVendor
-    ? [{ label: 'Active Projects' }, { label: 'Archived Projects' }]
+    ? [{ label: 'Active Projects' }, { label: 'My Requests' }, { label: 'Archived Projects' }]
     : [{ label: 'My Projects' }, { label: 'All Projects' }, { label: 'Archived Projects' }]
 
   const loadProjects = (tabIndex: number) => {
@@ -262,56 +783,35 @@ export default function ProjectsPage() {
     if (isClient) {
       request = projectsApi.listClient()
     } else if (isVendor) {
-      request = projectsApi.listVendor(tabIndex === 1)
+      if (tabIndex === 0) request = projectsApi.listVendor(false)
+      else if (tabIndex === 1) request = projectsApi.listVendorRequests()
+      else request = projectsApi.listVendor(true)
     } else {
-      // PM/AM/Admin view
       if (tabIndex === 0) request = projectsApi.listMine()
       else if (tabIndex === 2) request = projectsApi.list({ status: 'ARCHIVED' })
-      else return // All Projects tab handles its own data fetching
+      else return // All Projects tab self-manages
     }
 
     request.then(r => setProjects(r.data)).finally(() => setLoading(false))
   }
 
   useEffect(() => {
-    if (!isVendor && activeTab === 1 && !isClient) return // All Projects tab is self-managed
+    if (!isVendor && !isClient && activeTab === 1) return
     loadProjects(activeTab)
   }, [activeTab, isVendor, isClient])
 
   useEffect(() => {
     if (canManage) {
       clientsApi.list().then(r => setClients(r.data))
+      vendorsApi.list().then(r => setVendors(r.data))
+      usersApi.listByRole('PROJECT_MANAGER').then(r => setPms(r.data))
+      usersApi.listByRole('ACCOUNT_MANAGER').then(r => setAms(r.data))
     }
   }, [canManage])
 
-  const openCreate = () => { setForm(EMPTY); setModal('create') }
-  const openEdit = (p: Project) => {
-    setForm({
-      name: p.name,
-      description: p.description ?? '',
-      status: p.status,
-      priority: p.priority ?? 'MEDIUM',
-      billingMethod: p.billingMethod,
-      clientId: p.clientId,
-      startDate: p.startDate ? p.startDate.slice(0, 10) : '',
-      endDate: p.endDate ? p.endDate.slice(0, 10) : '',
-    })
-    setModal(p)
-  }
+  const openCreate = () => setModal('create')
+  const openEdit = (p: Project) => setModal(p)
   const closeModal = () => setModal(null)
-
-  const handleSave = async () => {
-    setSaving(true)
-    try {
-      const payload = Object.fromEntries(
-        Object.entries(form).filter(([, v]) => v !== '' && v !== 0 && v !== undefined)
-      )
-      if (modal === 'create') await projectsApi.create(payload)
-      else await projectsApi.update((modal as Project).id, payload)
-      loadProjects(activeTab)
-      closeModal()
-    } finally { setSaving(false) }
-  }
 
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this project? This will also delete all milestones and tasks.')) return
@@ -320,19 +820,21 @@ export default function ProjectsPage() {
   }
 
   const isEditing = modal !== null && modal !== 'create'
-  const set = (key: string, val: unknown) => setForm(p => ({ ...p, [key]: val }))
-  const PRIORITIES: ProjectPriority[] = ['LOW', 'MEDIUM', 'HIGH', 'URGENT']
-
-  // "All Projects" tab for PM/AM view renders its own data-fetching component
   const isAllProjectsTab = !isClient && !isVendor && activeTab === 1
+
+  // Vendor ID for request form
+  const vendorId = (user as any)?.vendor?.id ?? (user as any)?.vendorId ?? 0
 
   return (
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-gray-800">{t('nav.projects')}</h1>
-        {canManage && (
-          <button onClick={openCreate} className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700">
-            + {t('common.create')}
+        {(canManage || isVendor) && (
+          <button
+            onClick={openCreate}
+            className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700"
+          >
+            {isVendor ? '+ New Request' : `+ ${t('common.create')}`}
           </button>
         )}
       </div>
@@ -354,127 +856,38 @@ export default function ProjectsPage() {
         ))}
       </div>
 
-      {/* All Projects tab (PM/AM view) has its own filter-aware component */}
       {isAllProjectsTab ? (
         <AllProjectsTab onEdit={openEdit} onDelete={handleDelete} />
       ) : (
         <ProjectTable
           projects={projects}
           loading={loading}
-          onEdit={canManage ? openEdit : undefined}
+          onEdit={canManage || isVendor ? openEdit : undefined}
           onDelete={canManage ? handleDelete : undefined}
-          showActions={canManage}
+          showActions={canManage || isVendor}
+          showApprovalStatus={isVendor && activeTab === 1}
         />
       )}
 
-      {/* Create / Edit modal */}
-      {modal !== null && (
-        <Modal title={isEditing ? t('projects.editProject') : t('projects.newProject')} onClose={closeModal}>
-          <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">{t('common.name')} *</label>
-              <input
-                type="text"
-                value={form.name}
-                onChange={e => set('name', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">{t('projects.description')}</label>
-              <textarea
-                value={form.description}
-                onChange={e => set('description', e.target.value)}
-                rows={2}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">{t('projects.client')} *</label>
-                <select
-                  value={form.clientId}
-                  onChange={e => set('clientId', Number(e.target.value))}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  <option value={0}>— select —</option>
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">{t('common.status')}</label>
-                <select
-                  value={form.status}
-                  onChange={e => set('status', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {(['DRAFT', 'ACTIVE', 'ON_HOLD', 'COMPLETED', 'CANCELLED', 'ARCHIVED'] as ProjectStatus[]).map(s => (
-                    <option key={s} value={s}>{s.replace('_', ' ')}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">{t('projects.priority')}</label>
-                <select
-                  value={form.priority}
-                  onChange={e => set('priority', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {PRIORITIES.map(p => (
-                    <option key={p} value={p}>{PRIORITY_ICON[p]} {t(`projects.priority_${p}`)}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">{t('projects.billingMethod')}</label>
-                <select
-                  value={form.billingMethod}
-                  onChange={e => set('billingMethod', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                >
-                  {['HOURLY', 'FIXED', 'MIXED'].map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">{t('projects.startDate')}</label>
-                <input
-                  type="date"
-                  value={form.startDate}
-                  onChange={e => set('startDate', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">{t('projects.endDate')}</label>
-                <input
-                  type="date"
-                  value={form.endDate}
-                  onChange={e => set('endDate', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-end gap-2 mt-5">
-            <button
-              onClick={closeModal}
-              className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
-            >
-              {t('common.cancel')}
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving || !form.name || !form.clientId}
-              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-            >
-              {saving ? t('common.loading') : t('common.save')}
-            </button>
-          </div>
-        </Modal>
+      {/* Modals */}
+      {modal !== null && isVendor && (
+        <ProjectRequestModal
+          project={isEditing ? (modal as Project) : undefined}
+          vendorId={vendorId}
+          onClose={closeModal}
+          onSaved={() => loadProjects(activeTab)}
+        />
+      )}
+      {modal !== null && canManage && (
+        <ProjectCreationModal
+          project={isEditing ? (modal as Project) : undefined}
+          clients={clients}
+          vendors={vendors}
+          pms={pms}
+          ams={ams}
+          onClose={closeModal}
+          onSaved={() => loadProjects(activeTab)}
+        />
       )}
     </div>
   )

@@ -22,6 +22,13 @@ export class ProjectsController {
     return this.projectsService.findForVendor(vendorId, archived === 'true');
   }
 
+  @Get('vendor/requests')
+  findVendorRequests(@Req() req: any) {
+    const vendorId = req.user.vendor?.id;
+    if (!vendorId) throw new ForbiddenException('Not a vendor user');
+    return this.projectsService.findVendorRequests(vendorId);
+  }
+
   @Get('client')
   findForClient(@Req() req: any) {
     const clientId = req.user.client?.id;
