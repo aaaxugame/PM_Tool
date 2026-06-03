@@ -131,7 +131,7 @@ model Project {
   status             ProjectStatus   @default(DRAFT)
   approvalStatus     ProjectApproval @default(PENDING)
   priority           Priority        @default(MEDIUM)
-  billingMethod      BillingMethod   @default(HOURLY)
+  billingMethod      BillingMethod   @default(TIME_AND_MATERIALS)
   startDate          DateTime?
   endDate            DateTime?
   proposedCost       Decimal?        @db.Decimal(12, 2)
@@ -496,6 +496,8 @@ model Invoice {
   invoiceType    InvoiceType   @default(CLIENT)
   approvedAt     DateTime?
   rejectionNote  String?
+  version        Int           @default(1)
+  revisionNote   String?
 
   client        Client?    @relation(fields: [clientId], references: [id])
   clientId      Int?
@@ -511,6 +513,9 @@ model Invoice {
   vendorQuoteId Int?
   approvedBy    User?      @relation("InvoiceApprovedBy", fields: [approvedById], references: [id])
   approvedById  Int?
+  parentInvoice Invoice?   @relation("InvoiceRevisions", fields: [parentInvoiceId], references: [id])
+  parentInvoiceId Int?
+  revisions     Invoice[]  @relation("InvoiceRevisions")
 
   lineItems InvoiceLineItem[]
   payments  Payment[]
@@ -524,12 +529,13 @@ enum InvoiceStatus {
   SENT
   APPROVED
   REJECTED
+  REVISION_REQUESTED
   PAID
   OVERDUE
 }
 
 enum LineItemType {
-  HOURLY
+  TIME_AND_MATERIALS
   FIXED
   EXPENSE
   ADJUSTMENT
@@ -542,6 +548,7 @@ model InvoiceLineItem {
   unitPrice   Decimal      @db.Decimal(10, 2)
   amount      Decimal      @db.Decimal(12, 2)
   lineItemType LineItemType @default(FIXED)
+  receiptNote  String?
 
   invoice     Invoice    @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
   invoiceId   Int

@@ -900,7 +900,14 @@ export default function ProjectsPage() {
           project={isEditing ? (modal as Project) : undefined}
           vendorId={vendorId}
           onClose={closeModal}
-          onSaved={() => loadProjects(activeTab)}
+          onSaved={() => {
+            if (!isEditing) {
+              setActiveTab(1)
+              loadProjects(1)
+            } else {
+              loadProjects(activeTab)
+            }
+          }}
         />
       )}
       {modal !== null && canManage && (
