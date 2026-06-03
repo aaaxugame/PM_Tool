@@ -773,7 +773,7 @@ export default function ProjectsPage() {
   const tabs = isClient
     ? [{ label: 'My Projects' }]
     : isVendor
-    ? [{ label: 'Active Projects' }, { label: 'My Requests' }, { label: 'Archived Projects' }]
+    ? [{ label: 'Current Projects' }, { label: 'My Requests' }, { label: 'Archived Projects' }]
     : [{ label: 'My Projects' }, { label: 'All Projects' }, { label: 'Archived Projects' }]
 
   const loadProjects = (tabIndex: number) => {
