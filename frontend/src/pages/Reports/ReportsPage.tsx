@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { dashboardApi, type TimeReport, type InvoiceReport } from '../../api/dashboard'
 import { projectsApi, type Project } from '../../api/projects'
 import { clientsApi, type Client } from '../../api/organizations'
+import { fmtMoney } from '../../utils/currency'
 
 type ReportTab = 'time' | 'invoices'
 
@@ -254,19 +255,19 @@ export default function ReportsPage() {
               <div className="bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
                 <p className="text-xs text-blue-600 mb-0.5">{t('reports.totalBilled')}</p>
                 <p className="text-xl font-semibold font-mono text-blue-800">
-                  ${invoiceReport.totalBilled.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  {fmtMoney(invoiceReport.totalBilled)}
                 </p>
               </div>
               <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3">
                 <p className="text-xs text-green-600 mb-0.5">{t('reports.collected')}</p>
                 <p className="text-xl font-semibold font-mono text-green-800">
-                  ${invoiceReport.totalCollected.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  {fmtMoney(invoiceReport.totalCollected)}
                 </p>
               </div>
               <div className={`rounded-xl px-4 py-3 border ${invoiceReport.outstanding > 0 ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-gray-200'}`}>
                 <p className={`text-xs mb-0.5 ${invoiceReport.outstanding > 0 ? 'text-orange-600' : 'text-gray-500'}`}>{t('reports.outstanding')}</p>
                 <p className={`text-xl font-semibold font-mono ${invoiceReport.outstanding > 0 ? 'text-orange-800' : 'text-gray-700'}`}>
-                  ${invoiceReport.outstanding.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                  {fmtMoney(invoiceReport.outstanding)}
                 </p>
               </div>
             </div>
@@ -307,10 +308,10 @@ export default function ReportsPage() {
                       <td className="px-4 py-2.5 text-gray-800">{inv.client?.name ?? inv.vendor?.name ?? '—'}</td>
                       <td className="px-4 py-2.5 text-gray-500 text-xs">{inv.invoiceDate.slice(0, 10)}</td>
                       <td className="px-4 py-2.5 text-gray-500 text-xs">{inv.dueDate.slice(0, 10)}</td>
-                      <td className="px-4 py-2.5 font-mono text-gray-800">${inv.total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
-                      <td className="px-4 py-2.5 font-mono text-green-700">${inv.collected.toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                      <td className="px-4 py-2.5 font-mono text-gray-800">{fmtMoney(inv.total, (inv as any).currency)}</td>
+                      <td className="px-4 py-2.5 font-mono text-green-700">{fmtMoney(inv.collected, (inv as any).currency)}</td>
                       <td className="px-4 py-2.5 font-mono text-orange-700">
-                        ${Math.max(0, inv.total - inv.collected).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+                        {fmtMoney(Math.max(0, inv.total - inv.collected), (inv as any).currency)}
                       </td>
                       <td className="px-4 py-2.5">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${INVOICE_STATUS_COLORS[inv.status] ?? 'bg-gray-100 text-gray-600'}`}>

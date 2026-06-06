@@ -493,6 +493,7 @@ model Invoice {
   taxAmount      Decimal       @db.Decimal(12, 2)
   total          Decimal       @db.Decimal(12, 2)
   notes          String?
+  currency       String        @default("USD")
   sentAt         DateTime?
   paidAt         DateTime?
   createdAt      DateTime      @default(now())

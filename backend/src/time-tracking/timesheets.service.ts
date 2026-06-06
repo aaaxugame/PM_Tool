@@ -34,19 +34,68 @@ export class TimesheetsService {
   async findOne(id: number, userId: number) {
     const ts = await this.prisma.timesheet.findFirst({
       where: { id, userId },
+      include: { reviewedBy: { select: { id: true, name: true } } },
+    });
+    if (!ts) throw new NotFoundException(`Timesheet ${id} not found`);
+
+    const timeEntries = await this.prisma.timeEntry.findMany({
+      where: {
+        userId,
+        OR: [
+          { timesheetId: id },
+          { date: { gte: ts.periodStart, lte: ts.periodEnd } },
+        ],
+      },
       include: {
-        timeEntries: {
-          include: {
-            project: { select: { id: true, name: true } },
-            task: { select: { id: true, name: true } },
-          },
-          orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
-        },
+        project: { select: { id: true, name: true } },
+        task: { select: { id: true, name: true } },
+      },
+      orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
+    });
+
+    return { ...ts, timeEntries };
+  }
+
+  async findOneAsReviewer(id: number) {
+    const ts = await this.prisma.timesheet.findUnique({
+      where: { id },
+      include: {
+        user: { select: { id: true, name: true } },
         reviewedBy: { select: { id: true, name: true } },
       },
     });
     if (!ts) throw new NotFoundException(`Timesheet ${id} not found`);
-    return ts;
+
+    // Fetch entries linked by timesheetId OR falling within the period for this user
+    const timeEntries = await this.prisma.timeEntry.findMany({
+      where: {
+        userId: ts.userId,
+        OR: [
+          { timesheetId: id },
+          { date: { gte: ts.periodStart, lte: ts.periodEnd } },
+        ],
+      },
+      include: {
+        project: { select: { id: true, name: true } },
+        task: { select: { id: true, name: true } },
+      },
+      orderBy: [{ date: 'asc' }, { startTime: 'asc' }],
+    });
+
+    return { ...ts, timeEntries };
+  }
+
+  findAllApproved() {
+    return this.prisma.timesheet.findMany({
+      where: { status: 'APPROVED' },
+      include: {
+        user: { select: { id: true, name: true } },
+        reviewedBy: { select: { id: true, name: true } },
+        _count: { select: { timeEntries: true } },
+        timeEntries: { select: { durationMinutes: true, isBillable: true } },
+      },
+      orderBy: { periodStart: 'desc' },
+    });
   }
 
   async create(dto: CreateTimesheetDto, userId: number) {

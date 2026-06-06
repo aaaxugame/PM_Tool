@@ -43,6 +43,7 @@ export interface Invoice {
   taxAmount:      string
   total:          string
   notes:          string | null
+  currency:       string
   sentAt:         string | null
   paidAt:         string | null
   approvedAt:     string | null
@@ -88,6 +89,7 @@ export interface FinancialRow {
   projectId:    number
   projectName:  string
   billingMethod:string
+  currency:     string
   invoiced:     number
   approved:     number
   paid:         number

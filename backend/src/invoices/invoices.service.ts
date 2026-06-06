@@ -228,12 +228,26 @@ export class InvoicesService {
     const taxAmount = subtotal * (taxRate / 100);
     const total     = subtotal + taxAmount;
 
+    // Inherit currency from client or vendor if not supplied
+    let currency = rest.currency ?? 'USD';
+    if (!rest.currency) {
+      if (clientId) {
+        const client = await this.prisma.client.findUnique({ where: { id: clientId }, select: { currency: true } });
+        if (client?.currency) currency = client.currency;
+      } else if (vendorId) {
+        const vendor = await this.prisma.vendor.findUnique({ where: { id: vendorId }, select: { currency: true } });
+        if (vendor?.currency) currency = vendor.currency;
+      }
+    }
+    const { currency: _c, ...restWithoutCurrency } = rest;
+
     return this.prisma.invoice.create({
       data: {
-        ...rest,
+        ...restWithoutCurrency,
         invoiceType,
         triggerType,
         version,
+        currency,
         invoiceDate:    new Date(invoiceDate),
         dueDate:        new Date(dueDate),
         subtotal,
@@ -299,11 +313,34 @@ export class InvoicesService {
       }
     }
 
-    const data: any = { ...dto };
+    const { lineItems: newLineItems, clientId, projectId, ...rest } = dto;
+    const data: any = { ...rest };
     if (dto.invoiceDate) data.invoiceDate = new Date(dto.invoiceDate);
     if (dto.dueDate)     data.dueDate     = new Date(dto.dueDate);
     if (dto.status === 'SENT') data.sentAt = new Date();
     if (dto.status === 'PAID') data.paidAt = new Date();
+    if (clientId  !== undefined) data.clientId  = clientId  || null;
+    if (projectId !== undefined) data.projectId = projectId || null;
+
+    if (newLineItems && newLineItems.length > 0) {
+      const subtotal  = newLineItems.reduce((s, li) => s + li.quantity * li.unitPrice, 0);
+      const taxRate   = data.taxRate ?? Number(inv.taxRate);
+      const taxAmount = subtotal * (taxRate / 100);
+      data.subtotal   = subtotal;
+      data.taxAmount  = taxAmount;
+      data.total      = subtotal + taxAmount;
+
+      await this.prisma.invoiceLineItem.deleteMany({ where: { invoiceId: id } });
+      data.lineItems = {
+        create: newLineItems.map(li => ({
+          description:  li.description,
+          quantity:     li.quantity,
+          unitPrice:    li.unitPrice,
+          amount:       li.quantity * li.unitPrice,
+          lineItemType: (li.lineItemType as any) ?? 'FIXED',
+        })),
+      };
+    }
 
     return this.prisma.invoice.update({ where: { id }, data, include: INVOICE_INCLUDE });
   }
@@ -432,6 +469,7 @@ export class InvoicesService {
         status: { not: 'ARCHIVED' },
       },
       include: {
+        client: { select: { currency: true } },
         invoices: {
           include: { payments: { select: { amount: true } } },
         },
@@ -457,10 +495,21 @@ export class InvoicesService {
         .filter(inv => inv.status === 'SUBMITTED')
         .reduce((s, inv) => s + Number(inv.total), 0);
 
+      // Use the most common currency in invoices, falling back to the client's, then USD
+      const currencyCounts: Record<string, number> = {};
+      for (const inv of allInvoices) {
+        const c = (inv as any).currency ?? 'USD';
+        currencyCounts[c] = (currencyCounts[c] ?? 0) + 1;
+      }
+      const currency = Object.keys(currencyCounts).sort((a, b) => currencyCounts[b] - currencyCounts[a])[0]
+        ?? (p as any).client?.currency
+        ?? 'USD';
+
       return {
         projectId:   p.id,
         projectName: p.name,
         billingMethod: p.billingMethod,
+        currency,
         invoiced,
         approved,
         paid,

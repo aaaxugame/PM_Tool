@@ -5,7 +5,7 @@ import { UpdateProjectDto } from './dto/update-project.dto';
 import { ProjectStatus } from '@prisma/client';
 
 const PROJECT_INCLUDE = {
-  client: { select: { id: true, name: true } },
+  client: { select: { id: true, name: true, currency: true } },
   createdBy: { select: { id: true, name: true } },
   requestingVendor: { select: { id: true, name: true } },
   assignments: {
@@ -105,7 +105,7 @@ export class ProjectsService {
     const project = await this.prisma.project.findUnique({
       where: { id },
       include: {
-        client: { select: { id: true, name: true } },
+        client: { select: { id: true, name: true, currency: true } },
         createdBy: { select: { id: true, name: true } },
         requestingVendor: { select: { id: true, name: true } },
         assignments: { include: { user: { select: { id: true, name: true } } } },

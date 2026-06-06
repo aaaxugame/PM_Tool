@@ -230,7 +230,7 @@ export default function ProjectDetailPage() {
       {/* Info cards */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         {[
-          { label: t('projects.client'), value: project.client?.name ?? '—' },
+          { label: t('projects.client'), value: project.client ? `${project.client.name} · ${project.client.currency ?? 'USD'}` : '—' },
           { label: t('projects.billingMethod'), value: project.billingMethod.replace(/_/g, ' ') },
           { label: t('projects.startDate'), value: project.startDate ? project.startDate.slice(0, 10) : '—' },
           { label: t('projects.endDate'), value: project.endDate ? project.endDate.slice(0, 10) : '—' },

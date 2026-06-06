@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { vendorsApi, type Vendor } from '../../api/organizations'
 import Modal from '../../components/Modal'
+import { CURRENCIES } from '../../utils/currency'
 
 const EMPTY: Partial<Vendor> = { name: '', contactEmail: '', contactPhone: '', currency: 'USD', isActive: true }
 
@@ -95,7 +96,6 @@ export default function VendorsTab() {
               { label: 'Phone', key: 'contactPhone', type: 'text' },
               { label: 'Address', key: 'address', type: 'text' },
               { label: 'Default Hourly Rate', key: 'defaultHourlyRate', type: 'number' },
-              { label: 'Currency', key: 'currency', type: 'text' },
             ].map(f => (
               <div key={f.key}>
                 <label className="block text-xs font-medium text-gray-600 mb-1">{f.label}</label>
@@ -107,6 +107,16 @@ export default function VendorsTab() {
                 />
               </div>
             ))}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Currency</label>
+              <select
+                value={form.currency ?? 'USD'}
+                onChange={e => setForm(p => ({ ...p, currency: e.target.value }))}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+              </select>
+            </div>
             <label className="flex items-center gap-2 text-sm text-gray-600">
               <input type="checkbox" checked={form.isActive ?? true} onChange={e => setForm(p => ({ ...p, isActive: e.target.checked }))} />
               Active

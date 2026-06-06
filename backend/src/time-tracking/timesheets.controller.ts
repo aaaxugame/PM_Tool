@@ -24,8 +24,19 @@ export class TimesheetsController {
     return this.timesheetsService.findAllSubmitted();
   }
 
+  @Get('approved')
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER')
+  findApproved() {
+    return this.timesheetsService.findAllApproved();
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    const isReviewer = req.user.roles?.some((r: string) =>
+      ['SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER'].includes(r)
+    );
+    if (isReviewer) return this.timesheetsService.findOneAsReviewer(id);
     return this.timesheetsService.findOne(id, req.user.id);
   }
 

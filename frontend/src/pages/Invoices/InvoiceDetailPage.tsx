@@ -3,11 +3,17 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../store/authContext'
 import { invoicesApi, type InvoiceDetail, type InvoiceStatus } from '../../api/invoices'
+import { clientsApi, type Client } from '../../api/organizations'
+import { projectsApi, type Project } from '../../api/projects'
+import { CURRENCIES, fmtMoney, currencySymbol } from '../../utils/currency'
 import Modal from '../../components/Modal'
 import VendorInvoiceModal from './VendorInvoiceModal'
 import DocumentManager from '../../components/DocumentManager'
 import InvoicePDF from '../../components/InvoicePDF'
 import { pdf } from '@react-pdf/renderer'
+
+type LineItemForm = { description: string; quantity: string; unitPrice: string }
+const EMPTY_LINE: LineItemForm = { description: '', quantity: '1', unitPrice: '' }
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT:              'bg-gray-100 text-gray-600',
@@ -51,6 +57,7 @@ export default function InvoiceDetailPage() {
   const isVendor   = hasRole('CONTRACTOR') || hasRole('VENDOR_CONTACT')
   const isAM       = hasRole('ACCOUNT_MANAGER') || hasRole('ADMIN') || hasRole('SUPER_ADMIN')
   const isPM       = hasRole('PROJECT_MANAGER')
+  const isClient   = hasRole('CLIENT')
   const canReview  = isAM || isPM
   const vendorId   = (user as any)?.vendor?.id ?? 0
 
@@ -58,6 +65,12 @@ export default function InvoiceDetailPage() {
   const [loading, setLoading]   = useState(true)
   const [pdfLoading, setPdfLoading] = useState(false)
   const [editModal, setEditModal] = useState(false)
+  const [editClientModal, setEditClientModal] = useState(false)
+  const [editForm, setEditForm]   = useState<any>({})
+  const [editLines, setEditLines] = useState<LineItemForm[]>([{ ...EMPTY_LINE }])
+  const [clients, setClients]     = useState<Client[]>([])
+  const [projects, setProjects]   = useState<Project[]>([])
+  const [editSaving, setEditSaving] = useState(false)
   const [payModal, setPayModal]   = useState(false)
   const [payForm, setPayForm]     = useState<typeof PAYMENT_EMPTY>(PAYMENT_EMPTY)
   const [paySaving, setPaySaving] = useState(false)
@@ -70,6 +83,57 @@ export default function InvoiceDetailPage() {
     invoicesApi.get(invoiceId).then(r => setInvoice(r.data)).finally(() => setLoading(false))
 
   useEffect(() => { load() }, [invoiceId])
+
+  const openEditClient = async () => {
+    const [cl, pr] = await Promise.all([clientsApi.list(), projectsApi.list()])
+    setClients(cl.data); setProjects(pr.data)
+    if (invoice) {
+      setEditForm({
+        invoiceDate: invoice.invoiceDate.slice(0, 10),
+        dueDate:     invoice.dueDate.slice(0, 10),
+        taxRate:     String(parseFloat(invoice.taxRate)),
+        notes:       invoice.notes ?? '',
+        clientId:    invoice.clientId ?? 0,
+        projectId:   invoice.projectId ?? 0,
+        currency:    invoice.currency ?? 'USD',
+      })
+      setEditLines(invoice.lineItems.length > 0
+        ? invoice.lineItems.map(li => ({ description: li.description, quantity: String(parseFloat(li.quantity)), unitPrice: String(parseFloat(li.unitPrice)) }))
+        : [{ ...EMPTY_LINE }]
+      )
+    }
+    setEditClientModal(true)
+  }
+
+  const handleClientUpdate = async () => {
+    setEditSaving(true)
+    try {
+      const validLines = editLines.filter(l => l.description && l.quantity && l.unitPrice)
+      const payload: any = {
+        invoiceDate: editForm.invoiceDate,
+        dueDate:     editForm.dueDate,
+        taxRate:     parseFloat(editForm.taxRate) || 0,
+        currency:    editForm.currency ?? 'USD',
+        notes:       editForm.notes || undefined,
+        lineItems:   validLines.map(l => ({ description: l.description, quantity: parseFloat(l.quantity), unitPrice: parseFloat(l.unitPrice) })),
+      }
+      if (editForm.clientId)  payload.clientId  = editForm.clientId
+      if (editForm.projectId) payload.projectId = editForm.projectId
+      await invoicesApi.update(invoiceId, payload)
+      setEditClientModal(false)
+      load()
+    } finally { setEditSaving(false) }
+  }
+
+  const setEF    = (k: string, v: unknown) => setEditForm((p: any) => ({ ...p, [k]: v }))
+  const setELine = (i: number, k: keyof LineItemForm, v: string) =>
+    setEditLines(prev => prev.map((item, idx) => idx === i ? { ...item, [k]: v } : item))
+  const addELine    = () => setEditLines(prev => [...prev, { ...EMPTY_LINE }])
+  const removeELine = (i: number) => setEditLines(prev => prev.filter((_, idx) => idx !== i))
+  const eLineTotal  = (item: LineItemForm) => (parseFloat(item.quantity) || 0) * (parseFloat(item.unitPrice) || 0)
+  const eSubtotal   = editLines.reduce((s, item) => s + eLineTotal(item), 0)
+  const eTaxRate    = parseFloat(editForm.taxRate) || 0
+  const eTotal      = eSubtotal + eSubtotal * (eTaxRate / 100)
 
   const setPay = (k: string, v: string) => setPayForm(p => ({ ...p, [k]: v }))
 
@@ -173,6 +237,13 @@ export default function InvoiceDetailPage() {
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap justify-end">
+          {/* Client invoice: edit DRAFT (PM/AM) */}
+          {!isVendorInv && isDraft && (isPM || isAM) && (
+            <button onClick={openEditClient}
+              className="bg-gray-100 text-gray-700 text-sm px-3 py-1.5 rounded-lg hover:bg-gray-200">
+              Edit Draft
+            </button>
+          )}
           {/* Vendor: edit/submit DRAFT */}
           {isVendorInv && isDraft && isVendor && (
             <button onClick={() => setEditModal(true)}
@@ -283,7 +354,7 @@ export default function InvoiceDetailPage() {
           { label: 'Invoice Date', value: invoice.invoiceDate.slice(0, 10) },
           { label: 'Due Date',     value: invoice.dueDate.slice(0, 10) },
           { label: 'Tax Rate',     value: `${parseFloat(invoice.taxRate).toFixed(1)}%` },
-          { label: 'Type',         value: invoice.invoiceType },
+          { label: 'Currency',     value: invoice.currency ?? 'USD' },
         ].map(card => (
           <div key={card.label} className="bg-white rounded-xl border border-gray-200 px-4 py-3">
             <p className="text-xs text-gray-500 mb-0.5">{card.label}</p>
@@ -296,20 +367,20 @@ export default function InvoiceDetailPage() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-xl border border-gray-200 px-4 py-3">
           <p className="text-xs text-gray-500 mb-0.5">Subtotal</p>
-          <p className="text-base font-mono font-medium text-gray-800">${parseFloat(invoice.subtotal).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <p className="text-base font-mono font-medium text-gray-800">{fmtMoney(invoice.subtotal, invoice.currency)}</p>
         </div>
         <div className="bg-white rounded-xl border border-gray-200 px-4 py-3">
           <p className="text-xs text-gray-500 mb-0.5">Tax</p>
-          <p className="text-base font-mono font-medium text-gray-800">${parseFloat(invoice.taxAmount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <p className="text-base font-mono font-medium text-gray-800">{fmtMoney(invoice.taxAmount, invoice.currency)}</p>
         </div>
         <div className="bg-blue-50 rounded-xl border border-blue-200 px-4 py-3">
           <p className="text-xs text-blue-600 mb-0.5">Total</p>
-          <p className="text-base font-mono font-semibold text-blue-800">${parseFloat(invoice.total).toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
+          <p className="text-base font-mono font-semibold text-blue-800">{fmtMoney(invoice.total, invoice.currency)}</p>
         </div>
         <div className={`rounded-xl border px-4 py-3 ${balance <= 0 ? 'bg-green-50 border-green-200' : 'bg-orange-50 border-orange-200'}`}>
           <p className={`text-xs mb-0.5 ${balance <= 0 ? 'text-green-600' : 'text-orange-600'}`}>Balance Due</p>
           <p className={`text-base font-mono font-semibold ${balance <= 0 ? 'text-green-800' : 'text-orange-800'}`}>
-            ${Math.max(0, balance).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {fmtMoney(Math.max(0, balance), invoice.currency)}
           </p>
         </div>
       </div>
@@ -345,8 +416,8 @@ export default function InvoiceDetailPage() {
                     )}
                   </td>
                   <td className="px-4 py-3 text-gray-500 font-mono">{parseFloat(item.quantity)}</td>
-                  <td className="px-4 py-3 text-gray-500 font-mono">${parseFloat(item.unitPrice).toFixed(2)}</td>
-                  <td className="px-4 py-3 font-mono font-medium text-gray-800">${parseFloat(item.amount).toFixed(2)}</td>
+                  <td className="px-4 py-3 text-gray-500 font-mono">{fmtMoney(item.unitPrice, invoice.currency)}</td>
+                  <td className="px-4 py-3 font-mono font-medium text-gray-800">{fmtMoney(item.amount, invoice.currency)}</td>
                   <td className="px-4 py-3 text-gray-400 text-xs">{item.receiptNote ?? '—'}</td>
                 </tr>
               ))}
@@ -399,7 +470,7 @@ export default function InvoiceDetailPage() {
                   <td className="px-4 py-3 text-gray-500">{pay.paymentDate.slice(0, 10)}</td>
                   <td className="px-4 py-3 text-gray-700">{pay.paymentMethod}</td>
                   <td className="px-4 py-3 text-gray-500">{pay.reference ?? '—'}</td>
-                  <td className="px-4 py-3 font-mono font-medium text-green-700">${parseFloat(pay.amount).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                  <td className="px-4 py-3 font-mono font-medium text-green-700">{fmtMoney(pay.amount, invoice.currency)}</td>
                   <td className="px-4 py-3 text-gray-500">{pay.recordedBy.name}</td>
                   <td className="px-4 py-3 text-right">
                     {(isAM || isPM) && (
@@ -412,6 +483,91 @@ export default function InvoiceDetailPage() {
           </table>
         </div>
       </div>
+
+      {/* Edit Client Invoice Modal */}
+      {editClientModal && (
+        <Modal title="Edit Invoice" onClose={() => setEditClientModal(false)}>
+          <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Client</label>
+                <select value={editForm.clientId} onChange={e => setEF('clientId', Number(e.target.value))} className={inp}>
+                  <option value={0}>— select —</option>
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Project</label>
+                <select value={editForm.projectId} onChange={e => setEF('projectId', Number(e.target.value))} className={inp}>
+                  <option value={0}>— none —</option>
+                  {projects.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Invoice Date *</label>
+                <input type="date" value={editForm.invoiceDate} onChange={e => setEF('invoiceDate', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Due Date *</label>
+                <input type="date" value={editForm.dueDate} onChange={e => setEF('dueDate', e.target.value)} className={inp} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Tax Rate (%)</label>
+                <input type="number" min="0" max="100" step="0.1" value={editForm.taxRate} onChange={e => setEF('taxRate', e.target.value)} className={inp} />
+              </div>
+            </div>
+            <div>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-xs font-medium text-gray-600">Line Items *</label>
+                <button onClick={addELine} className="text-xs text-blue-600 hover:underline">+ Add Line</button>
+              </div>
+              <div className="space-y-2">
+                {editLines.map((item, i) => (
+                  <div key={i} className="grid grid-cols-12 gap-2 items-center">
+                    <input type="text" placeholder="Description" value={item.description}
+                      onChange={e => setELine(i, 'description', e.target.value)}
+                      className="col-span-6 border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    <input type="number" placeholder="Qty" min="0" step="0.5" value={item.quantity}
+                      onChange={e => setELine(i, 'quantity', e.target.value)}
+                      className="col-span-2 border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    <input type="number" placeholder="Price" min="0" step="0.01" value={item.unitPrice}
+                      onChange={e => setELine(i, 'unitPrice', e.target.value)}
+                      className="col-span-2 border border-gray-300 rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    <div className="col-span-1 text-xs font-mono text-gray-500 text-right">${eLineTotal(item).toFixed(2)}</div>
+                    <button onClick={() => removeELine(i)} disabled={editLines.length === 1}
+                      className="col-span-1 text-red-400 hover:text-red-600 text-xs disabled:opacity-30">✕</button>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 space-y-1 text-xs text-right text-gray-500">
+                <div>Subtotal: <span className="font-mono font-medium">{fmtMoney(eSubtotal, editForm.currency)}</span></div>
+                {eTaxRate > 0 && <div>Tax ({eTaxRate}%): <span className="font-mono">{fmtMoney(eSubtotal * eTaxRate / 100, editForm.currency)}</span></div>}
+                <div className="text-sm font-semibold text-gray-800">Total: <span className="font-mono">{fmtMoney(eTotal, editForm.currency)}</span></div>
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Currency</label>
+              <select value={editForm.currency ?? 'USD'} onChange={e => setEF('currency', e.target.value)} className={inp}>
+                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+              <textarea value={editForm.notes ?? ''} onChange={e => setEF('notes', e.target.value)} rows={2} className={inp} />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-5">
+            <button onClick={() => setEditClientModal(false)} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+            <button onClick={handleClientUpdate}
+              disabled={editSaving || !editForm.invoiceDate || !editForm.dueDate || editLines.every(l => !l.description || !l.unitPrice)}
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              {editSaving ? 'Saving…' : 'Save Changes'}
+            </button>
+          </div>
+        </Modal>
+      )}
 
       {/* Edit Draft Modal */}
       {editModal && (

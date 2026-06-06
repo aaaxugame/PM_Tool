@@ -7,6 +7,7 @@ import { clientsApi, type Client, vendorsApi, type Vendor } from '../../api/orga
 import { projectsApi, type Project } from '../../api/projects'
 import Modal from '../../components/Modal'
 import VendorInvoiceModal from './VendorInvoiceModal'
+import { CURRENCIES, currencySymbol } from '../../utils/currency'
 
 const STATUS_COLORS: Record<string, string> = {
   DRAFT:              'bg-gray-100 text-gray-600',
@@ -93,9 +94,14 @@ export default function InvoicesPage() {
   const openClientCreate = () => {
     const today = new Date().toISOString().slice(0, 10)
     const due   = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10)
-    setForm({ invoiceDate: today, dueDate: due, taxRate: '0', clientId: 0, projectId: 0 })
+    setForm({ invoiceDate: today, dueDate: due, taxRate: '0', clientId: 0, projectId: 0, currency: 'USD' })
     setLineItems([{ ...EMPTY_LINE }])
     setClientModal(true)
+  }
+
+  const handleClientChange = (clientId: number) => {
+    const client = clients.find(c => c.id === clientId)
+    setForm((p: any) => ({ ...p, clientId, currency: client?.currency ?? p.currency ?? 'USD' }))
   }
 
   const handleClientCreate = async () => {
@@ -107,6 +113,7 @@ export default function InvoicesPage() {
         invoiceDate: form.invoiceDate,
         dueDate:     form.dueDate,
         taxRate:     parseFloat(form.taxRate) || 0,
+        currency:    form.currency ?? 'USD',
         lineItems:   validLines.map(l => ({
           description: l.description,
           quantity:    parseFloat(l.quantity),
@@ -343,9 +350,9 @@ export default function InvoicesPage() {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Client *</label>
-                <select value={form.clientId} onChange={e => setF('clientId', Number(e.target.value))} className={inp}>
+                <select value={form.clientId} onChange={e => handleClientChange(Number(e.target.value))} className={inp}>
                   <option value={0}>— select —</option>
-                  {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {clients.map(c => <option key={c.id} value={c.id}>{c.name} ({c.currency})</option>)}
                 </select>
               </div>
               <div>
@@ -371,6 +378,12 @@ export default function InvoicesPage() {
               </div>
             </div>
             <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Currency</label>
+              <select value={form.currency ?? 'USD'} onChange={e => setF('currency', e.target.value)} className={inp}>
+                {CURRENCIES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
+              </select>
+            </div>
+            <div>
               <div className="flex justify-between items-center mb-2">
                 <label className="text-xs font-medium text-gray-600">Line Items *</label>
                 <button onClick={addLine} className="text-xs text-blue-600 hover:underline">+ Add Line</button>
@@ -394,9 +407,9 @@ export default function InvoicesPage() {
                 ))}
               </div>
               <div className="mt-3 space-y-1 text-xs text-right text-gray-500">
-                <div>Subtotal: <span className="font-mono font-medium">${subtotal.toFixed(2)}</span></div>
-                {taxRate > 0 && <div>Tax ({taxRate}%): <span className="font-mono">${(subtotal * taxRate / 100).toFixed(2)}</span></div>}
-                <div className="text-sm font-semibold text-gray-800">Total: <span className="font-mono">${total.toFixed(2)}</span></div>
+                <div>Subtotal: <span className="font-mono font-medium">{currencySymbol(form.currency ?? 'USD')}{subtotal.toFixed(2)}</span></div>
+                {taxRate > 0 && <div>Tax ({taxRate}%): <span className="font-mono">{currencySymbol(form.currency ?? 'USD')}{(subtotal * taxRate / 100).toFixed(2)}</span></div>}
+                <div className="text-sm font-semibold text-gray-800">Total: <span className="font-mono">{currencySymbol(form.currency ?? 'USD')}{total.toFixed(2)}</span></div>
               </div>
             </div>
             <div>

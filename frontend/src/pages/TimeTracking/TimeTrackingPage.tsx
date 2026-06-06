@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import {
@@ -54,9 +54,15 @@ export default function TimeTrackingPage() {
   // Review queue state (reviewer roles only)
   const [pendingTimesheets, setPendingTimesheets] = useState<Timesheet[]>([])
   const [pendingLoading, setPendingLoading] = useState(false)
+  const [approvedTimesheets, setApprovedTimesheets] = useState<any[]>([])
+  const [approvedLoading, setApprovedLoading] = useState(false)
   const [rejectTarget, setRejectTarget] = useState<Timesheet | null>(null)
   const [rejectReason, setRejectReason] = useState('')
   const [reviewSaving, setReviewSaving] = useState(false)
+  // Expanded timesheet entries (both review queue and My Timesheets)
+  const [expandedTs, setExpandedTs] = useState<number | null>(null)
+  const [expandedEntries, setExpandedEntries] = useState<Record<number, TimeEntry[]>>({})
+  const [expandLoading, setExpandLoading] = useState<number | null>(null)
 
   useEffect(() => {
     projectsApi.list().then(r => setProjects(r.data))
@@ -82,11 +88,18 @@ export default function TimeTrackingPage() {
     timesheetsApi.listPending().then(r => setPendingTimesheets(r.data)).finally(() => setPendingLoading(false))
   }
 
+  const loadApproved = () => {
+    if (!isReviewer) return
+    setApprovedLoading(true)
+    timesheetsApi.listApproved().then(r => setApprovedTimesheets(r.data)).finally(() => setApprovedLoading(false))
+  }
+
   useEffect(() => { loadEntries() }, [projectFilter, fromDate, toDate])
   useEffect(() => {
     if (tab === 'timesheets') {
       loadTimesheets()
       loadPending()
+      loadApproved()
     }
   }, [tab])
 
@@ -134,11 +147,24 @@ export default function TimeTrackingPage() {
     loadTimesheets()
   }
 
+  const toggleExpand = async (ts: Timesheet) => {
+    if (expandedTs === ts.id) { setExpandedTs(null); return }
+    setExpandedTs(ts.id)
+    if (!expandedEntries[ts.id]) {
+      setExpandLoading(ts.id)
+      try {
+        const r = await timesheetsApi.get(ts.id)
+        setExpandedEntries(prev => ({ ...prev, [ts.id]: r.data.timeEntries }))
+      } finally { setExpandLoading(null) }
+    }
+  }
+
   const handleApprove = async (ts: Timesheet) => {
     setReviewSaving(true)
     try {
       await timesheetsApi.approve(ts.id)
       loadPending()
+      loadApproved()
     } finally { setReviewSaving(false) }
   }
 
@@ -283,7 +309,7 @@ export default function TimeTrackingPage() {
       {/* ── TIMESHEETS TAB ── */}
       {tab === 'timesheets' && (
         <>
-          {/* ── REVIEW QUEUE (reviewer roles only) ── */}
+          {/* ── SECTION 1: PENDING REVIEW (reviewers only) ── */}
           {isReviewer && (
             <div className="mb-8">
               <div className="flex items-center gap-2 mb-3">
@@ -303,37 +329,103 @@ export default function TimeTrackingPage() {
                   <table className="w-full text-sm">
                     <thead className="bg-yellow-50 border-b border-yellow-100">
                       <tr>
-                        {['Employee', 'Period', 'Entries', ''].map(h => (
+                        {['Employee', 'Period', 'Entries', 'Total Hours', ''].map(h => (
                           <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      {pendingTimesheets.map(ts => (
-                        <tr key={ts.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-gray-700 font-medium">{ts.user?.name ?? '—'}</td>
-                          <td className="px-4 py-3 text-gray-600">
-                            {dateFromIso(ts.periodStart)} — {dateFromIso(ts.periodEnd)}
-                          </td>
-                          <td className="px-4 py-3 text-gray-500 text-center">{ts._count.timeEntries}</td>
-                          <td className="px-4 py-3 text-right space-x-3">
-                            <button
-                              onClick={() => handleApprove(ts)}
-                              disabled={reviewSaving}
-                              className="text-xs text-green-600 hover:underline disabled:opacity-50"
+                    <tbody>
+                      {pendingTimesheets.map(ts => {
+                        const isExpanded = expandedTs === ts.id
+                        const entries = expandedEntries[ts.id] ?? []
+                        const totalMins = entries.reduce((s, e) => s + e.durationMinutes, 0)
+                        return (
+                          <React.Fragment key={ts.id}>
+                            <tr
+                              key={ts.id}
+                              className={`border-b border-gray-100 cursor-pointer hover:bg-yellow-50 transition-colors ${isExpanded ? 'bg-yellow-50' : ''}`}
+                              onClick={() => toggleExpand(ts)}
                             >
-                              Approve
-                            </button>
-                            <button
-                              onClick={() => { setRejectTarget(ts); setRejectReason('') }}
-                              disabled={reviewSaving}
-                              className="text-xs text-red-500 hover:underline disabled:opacity-50"
-                            >
-                              Reject
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                              <td className="px-4 py-3 text-gray-700 font-medium">{ts.user?.name ?? '—'}</td>
+                              <td className="px-4 py-3 text-gray-600">
+                                {dateFromIso(ts.periodStart)} — {dateFromIso(ts.periodEnd)}
+                              </td>
+                              <td className="px-4 py-3 text-gray-500 text-center">{ts._count.timeEntries}</td>
+                              <td className="px-4 py-3 text-gray-500 font-mono text-xs">
+                                {isExpanded && entries.length > 0 ? formatDuration(totalMins) : '—'}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <span className="text-xs text-blue-500 font-medium">
+                                  {expandLoading === ts.id ? 'Loading…' : isExpanded ? '▲ Collapse' : '▼ View entries'}
+                                </span>
+                              </td>
+                            </tr>
+                            {isExpanded && (
+                              <tr className="bg-gray-50">
+                                <td colSpan={5} className="px-4 py-3">
+                                  {expandLoading === ts.id ? (
+                                    <p className="text-xs text-gray-400 py-2">{t('common.loading')}</p>
+                                  ) : entries.length === 0 ? (
+                                    <p className="text-xs text-gray-400 italic py-2">No time entries linked to this timesheet.</p>
+                                  ) : (
+                                    <>
+                                      <table className="w-full text-xs mb-3">
+                                        <thead>
+                                          <tr className="text-gray-400 border-b border-gray-200">
+                                            {['Date', 'Project', 'Task', 'Description', 'Start', 'End', 'Duration', 'Billable'].map(h => (
+                                              <th key={h} className="text-left pb-2 pr-3 font-medium uppercase tracking-wide">{h}</th>
+                                            ))}
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-gray-100">
+                                          {entries.map(e => (
+                                            <tr key={e.id} className="hover:bg-white">
+                                              <td className="py-2 pr-3 font-mono text-gray-600">{dateFromIso(e.date)}</td>
+                                              <td className="py-2 pr-3 text-gray-700">{e.project.name}</td>
+                                              <td className="py-2 pr-3 text-gray-500">{e.task?.name ?? '—'}</td>
+                                              <td className="py-2 pr-3 text-gray-500 max-w-xs truncate">{e.description ?? '—'}</td>
+                                              <td className="py-2 pr-3 font-mono text-gray-600">{timeFromIso(e.startTime)}</td>
+                                              <td className="py-2 pr-3 font-mono text-gray-600">{timeFromIso(e.endTime)}</td>
+                                              <td className="py-2 pr-3 font-mono font-medium text-gray-700">{formatDuration(e.durationMinutes)}</td>
+                                              <td className="py-2">
+                                                {e.isBillable
+                                                  ? <span className="px-1.5 py-0.5 bg-green-50 text-green-700 rounded">Yes</span>
+                                                  : <span className="text-gray-400">No</span>}
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                      <div className="flex justify-between items-center pt-2 border-t border-gray-200">
+                                        <span className="text-xs text-gray-500 font-medium">
+                                          {entries.length} entries · {formatDuration(totalMins)} total
+                                          {entries.filter(e => e.isBillable).length > 0 && ` · ${formatDuration(entries.filter(e => e.isBillable).reduce((s, e) => s + e.durationMinutes, 0))} billable`}
+                                        </span>
+                                        <div className="flex gap-3">
+                                          <button
+                                            onClick={e => { e.stopPropagation(); handleApprove(ts) }}
+                                            disabled={reviewSaving}
+                                            className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 disabled:opacity-50"
+                                          >
+                                            Approve
+                                          </button>
+                                          <button
+                                            onClick={e => { e.stopPropagation(); setRejectTarget(ts); setRejectReason('') }}
+                                            disabled={reviewSaving}
+                                            className="text-xs bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 disabled:opacity-50"
+                                          >
+                                            Reject
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </>
+                                  )}
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        )
+                      })}
                     </tbody>
                   </table>
                 </div>
@@ -341,8 +433,62 @@ export default function TimeTrackingPage() {
             </div>
           )}
 
+          {/* ── SECTION 2: APPROVED TIMESHEETS (reviewers only — billing reference) ── */}
+          {isReviewer && (
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-3">
+                <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">Approved Timesheets</h2>
+                {approvedTimesheets.length > 0 && (
+                  <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                    {approvedTimesheets.length}
+                  </span>
+                )}
+                <span className="text-xs text-gray-400 ml-1">— billing reference</span>
+              </div>
+              {approvedLoading ? (
+                <p className="text-sm text-gray-400">{t('common.loading')}</p>
+              ) : approvedTimesheets.length === 0 ? (
+                <p className="text-sm text-gray-400 italic">No approved timesheets yet.</p>
+              ) : (
+                <div className="bg-white rounded-xl border border-green-200 overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-green-50 border-b border-green-100">
+                      <tr>
+                        {['Employee', 'Period', 'Entries', 'Total Hours', 'Billable Hours', 'Approved By'].map(h => (
+                          <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {approvedTimesheets.map(ts => {
+                        const totalMins = ts.timeEntries.reduce((s: number, e: any) => s + e.durationMinutes, 0)
+                        const billableMins = ts.timeEntries.filter((e: any) => e.isBillable).reduce((s: number, e: any) => s + e.durationMinutes, 0)
+                        return (
+                          <tr key={ts.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 text-gray-700 font-medium">{ts.user?.name ?? '—'}</td>
+                            <td className="px-4 py-3 text-gray-600">{dateFromIso(ts.periodStart)} — {dateFromIso(ts.periodEnd)}</td>
+                            <td className="px-4 py-3 text-gray-500 text-center">{ts._count.timeEntries}</td>
+                            <td className="px-4 py-3 font-mono text-gray-700">{formatDuration(totalMins)}</td>
+                            <td className="px-4 py-3 font-mono text-green-700">{formatDuration(billableMins)}</td>
+                            <td className="px-4 py-3 text-gray-500">{ts.reviewedBy?.name ?? '—'}</td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ── SECTION 3: MY TIMESHEETS (all roles) ── */}
           <div className="flex justify-between items-center mb-4">
-            <span className="text-sm text-gray-500">{isReviewer ? 'My Timesheets' : `${timesheets.length} timesheet(s)`}</span>
+            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide">
+              My Timesheets
+              {timesheets.length > 0 && (
+                <span className="ml-2 px-2 py-0.5 bg-gray-100 text-gray-600 text-xs font-medium rounded-full normal-case">{timesheets.length}</span>
+              )}
+            </h2>
             <button onClick={() => setTsModal(true)} className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700">
               + New Timesheet
             </button>
@@ -360,34 +506,92 @@ export default function TimeTrackingPage() {
                     ))}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody>
                   {timesheets.length === 0 ? (
                     <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">{t('common.noData')}</td></tr>
-                  ) : timesheets.map(ts => (
-                    <tr key={ts.id} className="hover:bg-gray-50">
-                      <td className="px-4 py-3 text-gray-700">
-                        {dateFromIso(ts.periodStart)} — {dateFromIso(ts.periodEnd)}
-                      </td>
-                      <td className="px-4 py-3 text-gray-500 text-center">{ts._count.timeEntries}</td>
-                      <td className="px-4 py-3">
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${TS_STATUS_COLORS[ts.status]}`}>
-                          {ts.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-gray-500">{ts.reviewedBy?.name ?? '—'}</td>
-                      <td className="px-4 py-3 text-right space-x-2">
-                        {ts.status === 'DRAFT' && (
-                          <button onClick={() => handleTsSubmit(ts)} className="text-blue-600 hover:underline text-xs">Submit</button>
+                  ) : timesheets.map(ts => {
+                    const isExpanded = expandedTs === ts.id
+                    const entries = expandedEntries[ts.id] ?? []
+                    const totalMins = entries.reduce((s, e) => s + e.durationMinutes, 0)
+                    return (
+                      <React.Fragment key={ts.id}>
+                        <tr
+                          className={`border-b border-gray-100 cursor-pointer hover:bg-gray-50 transition-colors ${isExpanded ? 'bg-blue-50' : ''}`}
+                          onClick={() => toggleExpand(ts)}
+                        >
+                          <td className="px-4 py-3 text-gray-700">
+                            {dateFromIso(ts.periodStart)} — {dateFromIso(ts.periodEnd)}
+                          </td>
+                          <td className="px-4 py-3 text-gray-500 text-center">{ts._count.timeEntries}</td>
+                          <td className="px-4 py-3">
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${TS_STATUS_COLORS[ts.status]}`}>
+                              {ts.status}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-gray-500">{ts.reviewedBy?.name ?? '—'}</td>
+                          <td className="px-4 py-3 text-right space-x-2">
+                            {ts.status === 'DRAFT' && (
+                              <button onClick={e => { e.stopPropagation(); handleTsSubmit(ts) }} className="text-blue-600 hover:underline text-xs">Submit</button>
+                            )}
+                            {ts.status === 'DRAFT' && (
+                              <button onClick={e => { e.stopPropagation(); handleTsDelete(ts) }} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>
+                            )}
+                            {ts.status === 'REJECTED' && ts.rejectionReason && (
+                              <span className="text-xs text-red-500 italic">"{ts.rejectionReason}"</span>
+                            )}
+                            <span className="text-xs text-blue-400 ml-1">
+                              {expandLoading === ts.id ? '…' : isExpanded ? '▲' : '▼'}
+                            </span>
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr className="bg-gray-50 border-b border-gray-100">
+                            <td colSpan={5} className="px-4 py-3">
+                              {expandLoading === ts.id ? (
+                                <p className="text-xs text-gray-400 py-1">{t('common.loading')}</p>
+                              ) : entries.length === 0 ? (
+                                <p className="text-xs text-gray-400 italic py-1">No time entries found for this period.</p>
+                              ) : (
+                                <>
+                                  <table className="w-full text-xs mb-2">
+                                    <thead>
+                                      <tr className="text-gray-400 border-b border-gray-200">
+                                        {['Date', 'Project', 'Task', 'Description', 'Start', 'End', 'Duration', 'Billable'].map(h => (
+                                          <th key={h} className="text-left pb-2 pr-3 font-medium uppercase tracking-wide">{h}</th>
+                                        ))}
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                      {entries.map(e => (
+                                        <tr key={e.id} className="hover:bg-white">
+                                          <td className="py-2 pr-3 font-mono text-gray-600">{dateFromIso(e.date)}</td>
+                                          <td className="py-2 pr-3 text-gray-700">{e.project.name}</td>
+                                          <td className="py-2 pr-3 text-gray-500">{e.task?.name ?? '—'}</td>
+                                          <td className="py-2 pr-3 text-gray-500 max-w-xs truncate">{e.description ?? '—'}</td>
+                                          <td className="py-2 pr-3 font-mono text-gray-600">{timeFromIso(e.startTime)}</td>
+                                          <td className="py-2 pr-3 font-mono text-gray-600">{timeFromIso(e.endTime)}</td>
+                                          <td className="py-2 pr-3 font-mono font-medium text-gray-700">{formatDuration(e.durationMinutes)}</td>
+                                          <td className="py-2">
+                                            {e.isBillable
+                                              ? <span className="px-1.5 py-0.5 bg-green-50 text-green-700 rounded">Yes</span>
+                                              : <span className="text-gray-400">No</span>}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                  <p className="text-xs text-gray-500 pt-1 border-t border-gray-200">
+                                    {entries.length} entries · {formatDuration(totalMins)} total
+                                    {entries.filter(e => e.isBillable).length > 0 && ` · ${formatDuration(entries.filter(e => e.isBillable).reduce((s, e) => s + e.durationMinutes, 0))} billable`}
+                                  </p>
+                                </>
+                              )}
+                            </td>
+                          </tr>
                         )}
-                        {ts.status === 'DRAFT' && (
-                          <button onClick={() => handleTsDelete(ts)} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>
-                        )}
-                        {ts.status === 'REJECTED' && ts.rejectionReason && (
-                          <span className="text-xs text-red-500 italic">"{ts.rejectionReason}"</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
+                      </React.Fragment>
+                    )
+                  })}
                 </tbody>
               </table>
             </div>

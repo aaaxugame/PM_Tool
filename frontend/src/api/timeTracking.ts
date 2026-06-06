@@ -51,6 +51,7 @@ export const timeEntriesApi = {
 export const timesheetsApi = {
   list: () => api.get<Timesheet[]>('/timesheets'),
   listPending: () => api.get<Timesheet[]>('/timesheets/pending'),
+  listApproved: () => api.get<(Timesheet & { timeEntries: { durationMinutes: number; isBillable: boolean }[] })[]>('/timesheets/approved'),
   get: (id: number) => api.get<Timesheet & { timeEntries: TimeEntry[] }>(`/timesheets/${id}`),
   create: (data: { periodStart: string; periodEnd: string }) => api.post<Timesheet>('/timesheets', data),
   update: (id: number, data: { status?: TimesheetStatus; rejectionReason?: string }) =>

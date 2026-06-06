@@ -108,4 +108,8 @@ export class CreateInvoiceDto {
   @IsOptional()
   @Type(() => Number)
   parentInvoiceId?: number;
+
+  @IsString()
+  @IsOptional()
+  currency?: string;
 }

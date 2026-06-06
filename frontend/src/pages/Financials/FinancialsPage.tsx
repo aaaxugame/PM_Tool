@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom'
 import { invoicesApi, type FinancialRow } from '../../api/invoices'
 import { vendorsApi, type Vendor } from '../../api/organizations'
 import { clientsApi, type Client } from '../../api/organizations'
+import { fmtMoney } from '../../utils/currency'
 
-const fmt = (n: number) =>
-  '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const fmt = (n: number, currency = 'USD') => fmtMoney(n, currency)
 
 const BILLING_LABELS: Record<string, string> = {
   TIME_AND_MATERIALS: 'T&M',
@@ -142,17 +142,22 @@ export default function FinancialsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">
-                        {BILLING_LABELS[row.billingMethod] ?? row.billingMethod}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">
+                          {BILLING_LABELS[row.billingMethod] ?? row.billingMethod}
+                        </span>
+                        <span className="bg-blue-50 text-blue-600 text-xs px-2 py-0.5 rounded-full font-medium">
+                          {row.currency}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-center">{row.invoiceCount}</td>
-                    <td className="px-4 py-3 font-mono text-gray-700">{fmt(row.invoiced)}</td>
-                    <td className="px-4 py-3 font-mono text-teal-700">{fmt(row.approved)}</td>
-                    <td className="px-4 py-3 font-mono text-green-700">{fmt(row.paid)}</td>
+                    <td className="px-4 py-3 font-mono text-gray-700">{fmt(row.invoiced, row.currency)}</td>
+                    <td className="px-4 py-3 font-mono text-teal-700">{fmt(row.approved, row.currency)}</td>
+                    <td className="px-4 py-3 font-mono text-green-700">{fmt(row.paid, row.currency)}</td>
                     <td className="px-4 py-3 font-mono">
                       <span className={row.outstanding > 0 ? 'text-orange-600 font-medium' : 'text-gray-400'}>
-                        {fmt(row.outstanding)}
+                        {fmt(row.outstanding, row.currency)}
                       </span>
                     </td>
                     <td className="px-4 py-3 font-mono">
@@ -181,6 +186,7 @@ export default function FinancialsPage() {
                 <td className="px-4 py-3 font-mono font-semibold text-green-700">{fmt(totals.paid)}</td>
                 <td className="px-4 py-3 font-mono font-semibold text-orange-600">{fmt(totals.outstanding)}</td>
                 <td className="px-4 py-3 font-mono font-semibold text-blue-600">{fmt(totals.pending)}</td>
+                {/* Totals row intentionally shows mixed-currency sum in USD — individual rows show per-currency */}
               </tr>
             </tfoot>
           </table>

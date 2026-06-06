@@ -27,7 +27,7 @@ export interface Project {
   estimatedHours: string | null
   proposedWorkers: number | null
   requestingVendorId: number | null
-  client: { id: number; name: string } | null
+  client: { id: number; name: string; currency: string } | null
   createdBy: { id: number; name: string }
   requestingVendor: { id: number; name: string } | null
   assignments: { assignmentRole: string; user: { id: number; name: string } }[]
