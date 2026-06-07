@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTimeEntryDto } from './dto/create-time-entry.dto';
 import { UpdateTimeEntryDto } from './dto/update-time-entry.dto';
@@ -41,9 +41,18 @@ export class TimeEntriesService {
     return entry;
   }
 
-  create(dto: CreateTimeEntryDto, userId: number) {
+  async create(dto: CreateTimeEntryDto, userId: number) {
     const duration = parseMinutes(dto.endTime) - parseMinutes(dto.startTime);
     if (duration <= 0) throw new BadRequestException('endTime must be after startTime');
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { vendorId: true } });
+    if (user?.vendorId) {
+      const approved = await this.prisma.vendorQuote.findFirst({
+        where: { vendorId: user.vendorId, projectId: dto.projectId, status: 'APPROVED' },
+      });
+      if (!approved) throw new ForbiddenException('No approved quote for this project');
+    }
+
     const { date, startTime, endTime, ...rest } = dto;
     return this.prisma.timeEntry.create({
       data: {

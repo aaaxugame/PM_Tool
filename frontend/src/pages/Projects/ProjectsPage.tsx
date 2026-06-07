@@ -676,6 +676,83 @@ function ProjectTable({
   )
 }
 
+// ─── Vendor Requests tab (PM / AM / Admin) ────────────────────────────────────
+
+function VendorRequestsTab() {
+  const [requests, setRequests] = useState<Project[]>([])
+  const [loading, setLoading] = useState(true)
+  const [acting, setActing] = useState<number | null>(null)
+
+  const load = () => {
+    setLoading(true)
+    projectsApi.listPendingRequests().then(r => setRequests(r.data)).finally(() => setLoading(false))
+  }
+
+  useEffect(() => { load() }, [])
+
+  const handleAction = async (id: number, approvalStatus: 'APPROVED' | 'REJECTED') => {
+    setActing(id)
+    try {
+      await projectsApi.update(id, { approvalStatus })
+      load()
+    } finally { setActing(null) }
+  }
+
+  if (loading) return <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-400">Loading…</div>
+
+  if (requests.length === 0) return (
+    <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-400">
+      No pending vendor project requests.
+    </div>
+  )
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+      <table className="w-full text-sm">
+        <thead className="bg-gray-50 border-b border-gray-200">
+          <tr>
+            {['Project Name', 'Vendor', 'Category', 'Billing', 'Proposed Cost', 'Submitted', ''].map(h => (
+              <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-gray-100">
+          {requests.map(r => (
+            <tr key={r.id} className="hover:bg-gray-50">
+              <td className="px-4 py-3 font-medium text-gray-800">{r.name}</td>
+              <td className="px-4 py-3 text-gray-600">{r.requestingVendor?.name ?? '—'}</td>
+              <td className="px-4 py-3 text-gray-500">{r.category ?? '—'}</td>
+              <td className="px-4 py-3 text-gray-500">{BILLING_METHOD_LABELS[r.billingMethod]}</td>
+              <td className="px-4 py-3 font-mono text-gray-700">
+                {r.proposedCost ? `$${parseFloat(r.proposedCost).toLocaleString('en-US', { minimumFractionDigits: 2 })}` : '—'}
+              </td>
+              <td className="px-4 py-3 text-gray-500">{r.createdAt.slice(0, 10)}</td>
+              <td className="px-4 py-3 text-right">
+                <div className="flex justify-end gap-2">
+                  <button
+                    disabled={acting === r.id}
+                    onClick={() => handleAction(r.id, 'APPROVED')}
+                    className="px-2 py-1 text-xs rounded bg-green-50 text-green-700 border border-green-200 hover:bg-green-100 disabled:opacity-50"
+                  >
+                    Approve
+                  </button>
+                  <button
+                    disabled={acting === r.id}
+                    onClick={() => handleAction(r.id, 'REJECTED')}
+                    className="px-2 py-1 text-xs rounded bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 disabled:opacity-50"
+                  >
+                    Reject
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 // ─── All Projects tab (PM / AM / Admin) with filter bar ───────────────────────
 
 function AllProjectsTab({
@@ -799,7 +876,7 @@ export default function ProjectsPage() {
     ? [{ label: 'My Projects' }]
     : isVendor
     ? [{ label: 'Current Projects' }, { label: 'My Requests' }, { label: 'Archived Projects' }]
-    : [{ label: 'My Projects' }, { label: 'All Projects' }, { label: 'Archived Projects' }]
+    : [{ label: 'My Projects' }, { label: 'All Projects' }, { label: 'Vendor Requests' }, { label: 'Archived Projects' }]
 
   const loadProjects = (tabIndex: number) => {
     setLoading(true)
@@ -813,15 +890,15 @@ export default function ProjectsPage() {
       else request = projectsApi.listVendor(true)
     } else {
       if (tabIndex === 0) request = projectsApi.listMine()
-      else if (tabIndex === 2) request = projectsApi.list({ status: 'ARCHIVED' })
-      else return // All Projects tab self-manages
+      else if (tabIndex === 3) request = projectsApi.list({ status: 'ARCHIVED' })
+      else return // All Projects (tab 1) and Vendor Requests (tab 2) self-manage
     }
 
     request.then(r => setProjects(r.data)).finally(() => setLoading(false))
   }
 
   useEffect(() => {
-    if (!isVendor && !isClient && activeTab === 1) return
+    if (!isVendor && !isClient && (activeTab === 1 || activeTab === 2)) return
     loadProjects(activeTab)
   }, [activeTab, isVendor, isClient])
 
@@ -846,6 +923,7 @@ export default function ProjectsPage() {
 
   const isEditing = modal !== null && modal !== 'create'
   const isAllProjectsTab = !isClient && !isVendor && activeTab === 1
+  const isVendorRequestsTab = !isClient && !isVendor && activeTab === 2
 
   // Vendor ID for request form
   const vendorId = (user as any)?.vendor?.id ?? (user as any)?.vendorId ?? 0
@@ -883,6 +961,8 @@ export default function ProjectsPage() {
 
       {isAllProjectsTab ? (
         <AllProjectsTab onEdit={openEdit} onDelete={handleDelete} />
+      ) : isVendorRequestsTab ? (
+        <VendorRequestsTab />
       ) : (
         <ProjectTable
           projects={projects}

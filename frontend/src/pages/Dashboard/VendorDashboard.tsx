@@ -1,5 +1,7 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { dashboardApi, type VendorDashboard } from '../../api/dashboard'
+import { vendorQuotesApi, type VendorQuote } from '../../api/quotesBudgets'
 
 const fmt = (n: number) =>
   '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -47,15 +49,50 @@ function Skeleton() {
   )
 }
 
+const QUOTE_STATUS_COLORS: Record<string, string> = {
+  PENDING: 'bg-gray-100 text-gray-600',
+  SUBMITTED: 'bg-yellow-100 text-yellow-700',
+  APPROVED: 'bg-green-100 text-green-700',
+  REJECTED: 'bg-red-100 text-red-700',
+}
+
 export default function VendorDashboard() {
+  const navigate = useNavigate()
   const [data, setData] = useState<VendorDashboard | null>(null)
   const [loading, setLoading] = useState(true)
+  const [quotes, setQuotes] = useState<VendorQuote[]>([])
+  const [submitting, setSubmitting] = useState<number | null>(null)
+  const [deleteConfirm, setDeleteConfirm] = useState<number | null>(null)
+
+  const loadQuotes = useCallback(() => {
+    vendorQuotesApi.list().then(r => setQuotes(r.data))
+  }, [])
 
   useEffect(() => {
     dashboardApi.vendorDashboard()
       .then(r => setData(r.data))
       .finally(() => setLoading(false))
-  }, [])
+    loadQuotes()
+  }, [loadQuotes])
+
+  const handleSubmit = async (q: VendorQuote) => {
+    setSubmitting(q.id)
+    try {
+      await vendorQuotesApi.update(q.id, { status: 'SUBMITTED' })
+      loadQuotes()
+    } finally { setSubmitting(null) }
+  }
+
+  const handleDelete = async (id: number) => {
+    try {
+      await vendorQuotesApi.remove(id)
+      setDeleteConfirm(null)
+      loadQuotes()
+    } catch (e: any) {
+      setDeleteConfirm(null)
+      alert(e?.response?.data?.message ?? 'Failed to delete quote')
+    }
+  }
 
   if (loading) return <Skeleton />
   if (!data) return <p className="text-sm text-gray-400 text-center py-10">Failed to load dashboard.</p>
@@ -138,21 +175,68 @@ export default function VendorDashboard() {
 
       {/* Bottom tables */}
       <div className="grid grid-cols-2 gap-6">
-        {/* Pending Quotes */}
+        {/* My Quotes */}
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100">
-            <h2 className="text-sm font-semibold text-gray-700">Pending Quotes</h2>
+            <h2 className="text-sm font-semibold text-gray-700">My Quotes</h2>
           </div>
-          <div className="p-5">
-            {data.pendingQuotes === 0 ? (
-              <p className="text-sm text-gray-400">No pending quotes at this time.</p>
-            ) : (
-              <div className="flex items-center gap-3">
-                <span className="text-3xl font-bold text-blue-600">{data.pendingQuotes}</span>
-                <span className="text-sm text-gray-500">quote{data.pendingQuotes !== 1 ? 's' : ''} awaiting review</span>
-              </div>
-            )}
-          </div>
+          {quotes.length === 0 ? (
+            <p className="px-4 py-6 text-sm text-gray-400 text-center">No quotes yet.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-xs text-gray-400 border-b border-gray-100">
+                  <th className="px-4 py-2 text-left font-medium">Project</th>
+                  <th className="px-4 py-2 text-right font-medium">Price</th>
+                  <th className="px-4 py-2 text-center font-medium">Status</th>
+                  <th className="px-4 py-2" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {quotes.map(q => (
+                  <tr key={q.id} className="hover:bg-gray-50">
+                    <td className="px-4 py-3 font-medium text-gray-800">
+                      {q.project ? (
+                        <button onClick={() => navigate(`/projects/${q.project!.id}?tab=quotes`)} className="text-blue-600 hover:underline">
+                          {q.project.name}
+                        </button>
+                      ) : '—'}
+                    </td>
+                    <td className="px-4 py-3 text-right font-mono text-gray-700">
+                      {fmt(parseFloat(q.quotedPrice))}
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${QUOTE_STATUS_COLORS[q.status]}`}>
+                        {q.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-right space-x-2">
+                      {q.status === 'PENDING' && (
+                        <button
+                          disabled={submitting === q.id}
+                          onClick={() => handleSubmit(q)}
+                          className="px-2 py-1 text-xs rounded bg-yellow-50 text-yellow-700 border border-yellow-200 hover:bg-yellow-100 disabled:opacity-50"
+                        >
+                          Submit for Review
+                        </button>
+                      )}
+                      {(q.status === 'PENDING' || q.status === 'SUBMITTED') && (
+                        deleteConfirm === q.id ? (
+                          <span className="inline-flex items-center gap-1">
+                            <span className="text-xs text-gray-500">Sure?</span>
+                            <button onClick={() => handleDelete(q.id)} className="text-red-600 hover:underline text-xs font-medium">Yes</button>
+                            <button onClick={() => setDeleteConfirm(null)} className="text-gray-400 hover:underline text-xs">No</button>
+                          </span>
+                        ) : (
+                          <button onClick={() => setDeleteConfirm(q.id)} className="text-red-500 hover:underline text-xs">Delete</button>
+                        )
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
 
         {/* Recent Invoices */}

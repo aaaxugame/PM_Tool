@@ -29,6 +29,11 @@ export class ProjectsController {
     return this.projectsService.findVendorRequests(vendorId);
   }
 
+  @Get('pending-requests')
+  findPendingVendorRequests() {
+    return this.projectsService.findPendingVendorRequests();
+  }
+
   @Get('client')
   findForClient(@Req() req: any) {
     const clientId = req.user.client?.id;

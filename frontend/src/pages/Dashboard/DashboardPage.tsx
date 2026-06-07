@@ -102,7 +102,7 @@ function GenericDashboard() {
                     <tr key={p.id} className="hover:bg-gray-50 cursor-pointer" onClick={() => navigate(`/projects/${p.id}`)}>
                       <td className="px-4 py-3">
                         <p className="font-medium text-gray-800">{p.name}</p>
-                        <p className="text-xs text-gray-400">{p.client.name}</p>
+                        <p className="text-xs text-gray-400">{p.client?.name}</p>
                       </td>
                       <td className="px-4 py-3 text-right">
                         <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PROJECT_STATUS_COLORS[p.status] ?? 'bg-gray-100 text-gray-600'}`}>

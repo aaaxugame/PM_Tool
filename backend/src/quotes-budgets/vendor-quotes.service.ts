@@ -105,7 +105,15 @@ export class VendorQuotesService {
   }
 
   async remove(id: number) {
-    await this.findOne(id);
+    const quote = await this.findOne(id);
+    if (quote.status === 'APPROVED') {
+      throw new BadRequestException('Approved quotes cannot be deleted.');
+    }
+    // Disconnect any invoices referencing this quote before deleting
+    await this.prisma.invoice.updateMany({
+      where: { vendorQuoteId: id },
+      data: { vendorQuoteId: null },
+    });
     return this.prisma.vendorQuote.delete({ where: { id } });
   }
 }

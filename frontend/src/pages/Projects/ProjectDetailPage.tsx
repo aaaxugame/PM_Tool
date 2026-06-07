@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import { useAuth } from '../../store/authContext'
 import { projectsApi, milestonesApi, type ProjectDetail, type Milestone, type MilestoneStatus, type ProjectPriority } from '../../api/projects'
 import { tasksApi, type Task, type TaskStatus } from '../../api/tasks'
 import { usersApi, type User } from '../../api/organizations'
@@ -55,6 +56,8 @@ export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { t } = useTranslation()
+  const { hasRole } = useAuth()
+  const isVendor = hasRole('CONTRACTOR') || hasRole('VENDOR_CONTACT')
   const projectId = Number(id)
 
   const [project, setProject] = useState<ProjectDetail | null>(null)
@@ -79,6 +82,7 @@ export default function ProjectDetailPage() {
   const [qModal, setQModal] = useState<null | 'create' | VendorQuote>(null)
   const [qForm, setQForm] = useState<typeof QUOTE_EMPTY>(QUOTE_EMPTY)
   const [qSaving, setQSaving] = useState(false)
+  const [qDeleteConfirm, setQDeleteConfirm] = useState<number | null>(null)
 
   // Budget modal
   const [bModal, setBModal] = useState<null | 'create' | Budget>(null)
@@ -163,8 +167,14 @@ export default function ProjectDetailPage() {
     } finally { setQSaving(false) }
   }
   const handleQDelete = async (qid: number) => {
-    if (!confirm('Delete this quote?')) return
-    await vendorQuotesApi.remove(qid); loadQuotes()
+    try {
+      await vendorQuotesApi.remove(qid)
+      setQDeleteConfirm(null)
+      loadQuotes()
+    } catch (e: any) {
+      setQDeleteConfirm(null)
+      alert(e?.response?.data?.message ?? 'Failed to delete quote')
+    }
   }
   const handleQStatusChange = async (q: VendorQuote, status: QuoteStatus) => {
     await vendorQuotesApi.update(q.id, { status }); loadQuotes()
@@ -417,7 +427,17 @@ export default function ProjectDetailPage() {
                         {q.status !== 'APPROVED' && (
                           <button onClick={() => openQEdit(q)} className="text-blue-600 hover:underline text-xs">{t('common.edit')}</button>
                         )}
-                        <button onClick={() => handleQDelete(q.id)} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>
+                        {(q.status === 'PENDING' || q.status === 'SUBMITTED') && (
+                          qDeleteConfirm === q.id ? (
+                            <>
+                              <span className="text-xs text-gray-500">Sure?</span>
+                              <button onClick={() => handleQDelete(q.id)} className="text-red-600 hover:underline text-xs font-medium">Yes</button>
+                              <button onClick={() => setQDeleteConfirm(null)} className="text-gray-400 hover:underline text-xs">No</button>
+                            </>
+                          ) : (
+                            <button onClick={() => setQDeleteConfirm(q.id)} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>
+                          )
+                        )}
                       </td>
                     </tr>
                   ))}

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { dashboardApi, type AMDashboard } from '../../api/dashboard'
+import PendingQuotesPanel from './PendingQuotesPanel'
 
 const fmt = (n: number) =>
   '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -210,25 +211,7 @@ export default function AMDashboard() {
           )}
         </div>
 
-        {/* Vendor Quote Pipeline */}
-        <div className="bg-white rounded-xl border border-gray-200 p-5">
-          <h2 className="text-sm font-semibold text-gray-700 mb-4">Vendor Quote Pipeline</h2>
-          {data.pendingQuotes === 0 ? (
-            <p className="text-sm text-gray-400">No quotes pending review.</p>
-          ) : (
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center gap-3">
-                <span className="text-4xl font-bold text-yellow-500">{data.pendingQuotes}</span>
-                <span className="text-sm text-gray-500">
-                  vendor quote{data.pendingQuotes !== 1 ? 's' : ''} pending review
-                </span>
-              </div>
-              <a href="/invoices" className="text-xs text-blue-600 hover:underline w-fit">
-                View all invoices &rarr;
-              </a>
-            </div>
-          )}
-        </div>
+        <PendingQuotesPanel />
       </div>
     </div>
   )

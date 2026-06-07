@@ -93,6 +93,17 @@ export class ProjectsService {
     });
   }
 
+  findPendingVendorRequests() {
+    return this.prisma.project.findMany({
+      where: {
+        requestingVendorId: { not: null },
+        approvalStatus: 'PENDING',
+      },
+      include: PROJECT_INCLUDE,
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
   findForClient(clientId: number) {
     return this.prisma.project.findMany({
       where: { clientId },
@@ -176,6 +187,17 @@ export class ProjectsService {
 
   async remove(id: number) {
     await this.findOne(id);
-    return this.prisma.project.delete({ where: { id } });
+    await this.prisma.$transaction([
+      this.prisma.timeEntry.deleteMany({ where: { projectId: id } }),
+      this.prisma.invoiceLineItem.deleteMany({ where: { invoice: { projectId: id } } }),
+      this.prisma.invoice.deleteMany({ where: { projectId: id } }),
+      this.prisma.vendorQuote.deleteMany({ where: { projectId: id } }),
+      this.prisma.budget.deleteMany({ where: { projectId: id } }),
+      this.prisma.billingRate.deleteMany({ where: { projectId: id } }),
+      this.prisma.document.deleteMany({ where: { projectId: id } }),
+      this.prisma.task.deleteMany({ where: { projectId: id } }),
+      this.prisma.milestone.deleteMany({ where: { projectId: id } }),
+      this.prisma.project.delete({ where: { id } }),
+    ]);
   }
 }

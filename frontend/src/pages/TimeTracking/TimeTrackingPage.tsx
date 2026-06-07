@@ -7,6 +7,7 @@ import {
   formatDuration, timeFromIso, dateFromIso,
 } from '../../api/timeTracking'
 import { projectsApi, type Project } from '../../api/projects'
+import { vendorQuotesApi } from '../../api/quotesBudgets'
 import Modal from '../../components/Modal'
 import TimeEntryModal from './TimeEntryModal'
 import { useAuth } from '../../store/authContext'
@@ -64,8 +65,17 @@ export default function TimeTrackingPage() {
   const [expandedEntries, setExpandedEntries] = useState<Record<number, TimeEntry[]>>({})
   const [expandLoading, setExpandLoading] = useState<number | null>(null)
 
+  const isVendor = hasRole('CONTRACTOR') || hasRole('VENDOR_CONTACT')
+
   useEffect(() => {
-    projectsApi.list().then(r => setProjects(r.data))
+    if (isVendor) {
+      vendorQuotesApi.list({ status: 'APPROVED' }).then(r => {
+        const approvedProjectIds = new Set(r.data.map(q => q.projectId).filter(Boolean))
+        projectsApi.list().then(pr => setProjects(pr.data.filter(p => approvedProjectIds.has(p.id))))
+      })
+    } else {
+      projectsApi.list().then(r => setProjects(r.data))
+    }
   }, [])
 
   const loadEntries = () => {

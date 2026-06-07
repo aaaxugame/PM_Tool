@@ -74,6 +74,7 @@ export const projectsApi = {
   listVendor: (archived?: boolean) =>
     api.get<Project[]>(archived ? '/projects/vendor?archived=true' : '/projects/vendor'),
   listVendorRequests: () => api.get<Project[]>('/projects/vendor/requests'),
+  listPendingRequests: () => api.get<Project[]>('/projects/pending-requests'),
   listClient: () => api.get<Project[]>('/projects/client'),
   get: (id: number) => api.get<ProjectDetail>(`/projects/${id}`),
   create: (data: Record<string, unknown>) => api.post<Project>('/projects', data),
