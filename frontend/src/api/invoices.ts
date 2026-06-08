@@ -75,9 +75,10 @@ export interface InvoiceDetail extends Invoice {
 }
 
 export interface EligibleItems {
-  billingMethod: string
-  vendorQuote:   { id: number; quotedPrice: string; hourlyRate: string | null; estimatedHours: string | null } | null
-  timeEntries:   Array<{
+  billingMethod:     string
+  projectHourlyRate: string | null
+  vendorQuote:       { id: number; quotedPrice: string; hourlyRate: string | null; estimatedHours: string | null } | null
+  timeEntries:       Array<{
     id: number; date: string; durationMinutes: number; description: string | null; isBillable: boolean
     task: { id: number; name: string } | null
     user: { id: number; name: string }

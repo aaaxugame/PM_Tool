@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import Modal from '../../components/Modal'
-import { invoicesApi, type InvoiceDetail, type InvoiceLineItem, type LineItemType } from '../../api/invoices'
+import { invoicesApi, type InvoiceDetail, type InvoiceLineItem, type LineItemType, type EligibleItems } from '../../api/invoices'
 import { projectsApi, type Project } from '../../api/projects'
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -97,6 +97,23 @@ export default function VendorInvoiceModal({
     const fetch = isInternal ? projectsApi.list() : projectsApi.listVendor(false)
     fetch.then(r => setProjects(r.data))
   }, [])
+
+  // When in auto-generate mode and a project is selected, proactively check
+  // whether a rate exists so the error shows before the user clicks Generate.
+  useEffect(() => {
+    if (mode !== 'auto' || !projectId || isInternal) return
+    setError('')
+    invoicesApi.getEligible(projectId)
+      .then(r => {
+        const { billingMethod, vendorQuote, projectHourlyRate } = r.data as EligibleItems
+        const needsRate = billingMethod === 'TIME_AND_MATERIALS' || billingMethod === 'MIXED'
+        const hasRate   = !!(vendorQuote?.hourlyRate || projectHourlyRate)
+        if (needsRate && !hasRate) {
+          setError('No hourly rate found. Set an hourly rate on the project or use "Build manually" to enter amounts yourself.')
+        }
+      })
+      .catch(() => {})
+  }, [projectId, mode])
 
   // ── Derived totals ────────────────────────────────────────────────────────
   const subtotal = rows.reduce((s, r) => s + (parseFloat(r.quantity) || 0) * (parseFloat(r.unitPrice) || 0), 0)
@@ -238,7 +255,7 @@ export default function VendorInvoiceModal({
           <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
           <button
             onClick={handleAutoGenerate}
-            disabled={!projectId || generating}
+            disabled={!projectId || generating || !!error}
             className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
           >
             {generating ? (
