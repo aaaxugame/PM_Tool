@@ -133,21 +133,17 @@ export class InvoicesController {
   }
 
   @Post(':id/approve')
-  @UseGuards(RolesGuard)
-  @Roles('SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER', 'CLIENT')
   approve(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    return this.invoicesService.approve(id, req.user.id);
+    return this.invoicesService.approve(id, req.user.id, req.user.roles ?? [], req.user.client?.id);
   }
 
   @Post(':id/reject')
-  @UseGuards(RolesGuard)
-  @Roles('SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER')
   reject(
     @Param('id', ParseIntPipe) id: number,
     @Body('rejectionNote') rejectionNote: string,
     @Req() req: any,
   ) {
-    return this.invoicesService.reject(id, req.user.id, rejectionNote);
+    return this.invoicesService.reject(id, req.user.id, rejectionNote, req.user.roles ?? []);
   }
 
   @Post(':id/request-revision')

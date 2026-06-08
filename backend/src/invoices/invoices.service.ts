@@ -373,12 +373,20 @@ export class InvoicesService {
 
   // ── Approve / Reject ─────────────────────────────────────────────────────────
 
-  async approve(id: number, userId: number) {
+  async approve(id: number, userId: number, userRoles: string[], userClientId?: number) {
     const inv = await this.findOne(id);
-    const allowedStatuses: InvoiceStatus[] = inv.invoiceType === 'VENDOR' ? ['SUBMITTED'] : ['SENT'];
-    if (!allowedStatuses.includes(inv.status)) {
-      throw new BadRequestException(`Cannot approve invoice in ${inv.status} status`);
+
+    if (inv.invoiceType === 'VENDOR') {
+      const allowed = userRoles.some(r => ['SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER'].includes(r));
+      if (!allowed) throw new ForbiddenException('Not authorized to approve vendor invoices');
+      if (inv.status !== 'SUBMITTED') throw new BadRequestException(`Cannot approve invoice in ${inv.status} status`);
+    } else {
+      const isInternalApprover = userRoles.some(r => ['SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER'].includes(r));
+      const isMatchingClient = userRoles.includes('CLIENT') && userClientId === (inv as any).clientId;
+      if (!isInternalApprover && !isMatchingClient) throw new ForbiddenException('Not authorized to approve this invoice');
+      if (inv.status !== 'SENT') throw new BadRequestException(`Cannot approve invoice in ${inv.status} status`);
     }
+
     return this.prisma.invoice.update({
       where: { id },
       data:  { status: 'APPROVED', approvedById: userId, approvedAt: new Date() },
@@ -386,10 +394,12 @@ export class InvoicesService {
     });
   }
 
-  async reject(id: number, userId: number, rejectionNote: string) {
+  async reject(id: number, userId: number, rejectionNote: string, userRoles: string[]) {
     const inv = await this.findOne(id);
     if (inv.invoiceType !== 'VENDOR') throw new BadRequestException('Only vendor invoices can be rejected');
     if (inv.status !== 'SUBMITTED')   throw new BadRequestException(`Cannot reject invoice in ${inv.status} status`);
+    const allowed = userRoles.some(r => ['SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER'].includes(r));
+    if (!allowed) throw new ForbiddenException('Not authorized to reject vendor invoices');
     return this.prisma.invoice.update({
       where: { id },
       data:  { status: 'REJECTED', approvedById: userId, approvedAt: new Date(), rejectionNote },
