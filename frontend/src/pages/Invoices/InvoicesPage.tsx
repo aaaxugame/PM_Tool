@@ -340,6 +340,7 @@ export default function InvoicesPage() {
           existingInvoice={editInvoice ?? undefined}
           onClose={() => { setVendorModal(false); setEditInvoice(null) }}
           onSaved={() => { setVendorModal(false); setEditInvoice(null); load() }}
+          isInternal={isAM || isPM}
         />
       )}
 

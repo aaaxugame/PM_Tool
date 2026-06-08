@@ -63,11 +63,13 @@ export default function VendorInvoiceModal({
   existingInvoice,
   onClose,
   onSaved,
+  isInternal = false,
 }: {
   vendorId:         number
-  existingInvoice?: InvoiceDetail   // set when editing a DRAFT
+  existingInvoice?: InvoiceDetail
   onClose:          () => void
   onSaved:          (inv: InvoiceDetail) => void
+  isInternal?:      boolean
 }) {
   const isEdit = !!existingInvoice
 
@@ -96,7 +98,8 @@ export default function VendorInvoiceModal({
   )
 
   useEffect(() => {
-    projectsApi.listVendor(false).then(r => setProjects(r.data))
+    const fetch = isInternal ? projectsApi.list() : projectsApi.listVendor(false)
+    fetch.then(r => setProjects(r.data))
   }, [])
 
   // ── Derived totals ────────────────────────────────────────────────────────
