@@ -375,57 +375,57 @@ export default function TimeTrackingPage() {
                                   ) : entries.length === 0 ? (
                                     <p className="text-xs text-gray-400 italic py-2">No time entries linked to this timesheet.</p>
                                   ) : (
-                                    <>
-                                      <table className="w-full text-xs mb-3">
-                                        <thead>
-                                          <tr className="text-gray-400 border-b border-gray-200">
-                                            {['Date', 'Project', 'Task', 'Description', 'Start', 'End', 'Duration', 'Billable'].map(h => (
-                                              <th key={h} className="text-left pb-2 pr-3 font-medium uppercase tracking-wide">{h}</th>
-                                            ))}
-                                          </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-gray-100">
-                                          {entries.map(e => (
-                                            <tr key={e.id} className="hover:bg-white">
-                                              <td className="py-2 pr-3 font-mono text-gray-600">{dateFromIso(e.date)}</td>
-                                              <td className="py-2 pr-3 text-gray-700">{e.project.name}</td>
-                                              <td className="py-2 pr-3 text-gray-500">{e.task?.name ?? '—'}</td>
-                                              <td className="py-2 pr-3 text-gray-500 max-w-xs truncate">{e.description ?? '—'}</td>
-                                              <td className="py-2 pr-3 font-mono text-gray-600">{timeFromIso(e.startTime)}</td>
-                                              <td className="py-2 pr-3 font-mono text-gray-600">{timeFromIso(e.endTime)}</td>
-                                              <td className="py-2 pr-3 font-mono font-medium text-gray-700">{formatDuration(e.durationMinutes)}</td>
-                                              <td className="py-2">
-                                                {e.isBillable
-                                                  ? <span className="px-1.5 py-0.5 bg-green-50 text-green-700 rounded">Yes</span>
-                                                  : <span className="text-gray-400">No</span>}
-                                              </td>
-                                            </tr>
+                                    <table className="w-full text-xs mb-3">
+                                      <thead>
+                                        <tr className="text-gray-400 border-b border-gray-200">
+                                          {['Date', 'Project', 'Task', 'Description', 'Start', 'End', 'Duration', 'Billable'].map(h => (
+                                            <th key={h} className="text-left pb-2 pr-3 font-medium uppercase tracking-wide">{h}</th>
                                           ))}
-                                        </tbody>
-                                      </table>
-                                      <div className="flex justify-between items-center pt-2 border-t border-gray-200">
-                                        <span className="text-xs text-gray-500 font-medium">
-                                          {entries.length} entries · {formatDuration(totalMins)} total
-                                          {entries.filter(e => e.isBillable).length > 0 && ` · ${formatDuration(entries.filter(e => e.isBillable).reduce((s, e) => s + e.durationMinutes, 0))} billable`}
-                                        </span>
-                                        <div className="flex gap-3">
-                                          <button
-                                            onClick={e => { e.stopPropagation(); handleApprove(ts) }}
-                                            disabled={reviewSaving}
-                                            className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 disabled:opacity-50"
-                                          >
-                                            Approve
-                                          </button>
-                                          <button
-                                            onClick={e => { e.stopPropagation(); setRejectTarget(ts); setRejectReason('') }}
-                                            disabled={reviewSaving}
-                                            className="text-xs bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 disabled:opacity-50"
-                                          >
-                                            Reject
-                                          </button>
-                                        </div>
+                                        </tr>
+                                      </thead>
+                                      <tbody className="divide-y divide-gray-100">
+                                        {entries.map(e => (
+                                          <tr key={e.id} className="hover:bg-white">
+                                            <td className="py-2 pr-3 font-mono text-gray-600">{dateFromIso(e.date)}</td>
+                                            <td className="py-2 pr-3 text-gray-700">{e.project.name}</td>
+                                            <td className="py-2 pr-3 text-gray-500">{e.task?.name ?? '—'}</td>
+                                            <td className="py-2 pr-3 text-gray-500 max-w-xs truncate">{e.description ?? '—'}</td>
+                                            <td className="py-2 pr-3 font-mono text-gray-600">{timeFromIso(e.startTime)}</td>
+                                            <td className="py-2 pr-3 font-mono text-gray-600">{timeFromIso(e.endTime)}</td>
+                                            <td className="py-2 pr-3 font-mono font-medium text-gray-700">{formatDuration(e.durationMinutes)}</td>
+                                            <td className="py-2">
+                                              {e.isBillable
+                                                ? <span className="px-1.5 py-0.5 bg-green-50 text-green-700 rounded">Yes</span>
+                                                : <span className="text-gray-400">No</span>}
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
+                                  )}
+                                  {!expandLoading && (
+                                    <div className="flex justify-between items-center pt-2 border-t border-gray-200 mt-1">
+                                      <span className="text-xs text-gray-500 font-medium">
+                                        {entries.length > 0 && `${entries.length} entries · ${formatDuration(totalMins)} total`}
+                                        {entries.filter(e => e.isBillable).length > 0 && ` · ${formatDuration(entries.filter(e => e.isBillable).reduce((s, e) => s + e.durationMinutes, 0))} billable`}
+                                      </span>
+                                      <div className="flex gap-3">
+                                        <button
+                                          onClick={e => { e.stopPropagation(); handleApprove(ts) }}
+                                          disabled={reviewSaving}
+                                          className="text-xs bg-green-600 text-white px-3 py-1.5 rounded-lg hover:bg-green-700 disabled:opacity-50"
+                                        >
+                                          Approve
+                                        </button>
+                                        <button
+                                          onClick={e => { e.stopPropagation(); setRejectTarget(ts); setRejectReason('') }}
+                                          disabled={reviewSaving}
+                                          className="text-xs bg-red-500 text-white px-3 py-1.5 rounded-lg hover:bg-red-600 disabled:opacity-50"
+                                        >
+                                          Reject
+                                        </button>
                                       </div>
-                                    </>
+                                    </div>
                                   )}
                                 </td>
                               </tr>
