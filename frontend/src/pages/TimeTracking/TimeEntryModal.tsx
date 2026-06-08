@@ -70,8 +70,11 @@ export default function TimeEntryModal({ entry, projects, prefill, onClose, onSa
     return d > 0 ? d : null
   })()
 
+  const [saveError, setSaveError] = useState<string | null>(null)
+
   const handleSave = async () => {
     setSaving(true)
+    setSaveError(null)
     try {
       const payload = Object.fromEntries(
         Object.entries(form).filter(([, v]) => v !== '' && v !== 0 && v !== undefined)
@@ -79,6 +82,8 @@ export default function TimeEntryModal({ entry, projects, prefill, onClose, onSa
       if (entry) await timeEntriesApi.update(entry.id, payload)
       else await timeEntriesApi.create(payload)
       onSaved()
+    } catch (err: any) {
+      setSaveError(err?.response?.data?.message ?? 'Failed to save time entry')
     } finally { setSaving(false) }
   }
 
@@ -146,6 +151,8 @@ export default function TimeEntryModal({ entry, projects, prefill, onClose, onSa
           Billable
         </label>
       </div>
+
+      {saveError && <p className="text-sm text-red-600 mt-3">{saveError}</p>}
 
       <div className="flex justify-end gap-2 mt-5">
         <button onClick={onClose} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">{t('common.cancel')}</button>

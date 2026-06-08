@@ -47,10 +47,13 @@ export class TimeEntriesService {
 
     const user = await this.prisma.user.findUnique({ where: { id: userId }, select: { vendorId: true } });
     if (user?.vendorId) {
-      const approved = await this.prisma.vendorQuote.findFirst({
+      const hasQuote = await this.prisma.vendorQuote.findFirst({
         where: { vendorId: user.vendorId, projectId: dto.projectId, status: 'APPROVED' },
       });
-      if (!approved) throw new ForbiddenException('No approved quote for this project');
+      const isRequestingVendor = await this.prisma.project.findFirst({
+        where: { id: dto.projectId, requestingVendorId: user.vendorId, approvalStatus: 'APPROVED' },
+      });
+      if (!hasQuote && !isRequestingVendor) throw new ForbiddenException('No approved quote for this project');
     }
 
     const { date, startTime, endTime, ...rest } = dto;

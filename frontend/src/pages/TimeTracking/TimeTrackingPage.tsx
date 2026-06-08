@@ -69,10 +69,7 @@ export default function TimeTrackingPage() {
 
   useEffect(() => {
     if (isVendor) {
-      vendorQuotesApi.list({ status: 'APPROVED' }).then(r => {
-        const approvedProjectIds = new Set(r.data.map(q => q.projectId).filter(Boolean))
-        projectsApi.list().then(pr => setProjects(pr.data.filter(p => approvedProjectIds.has(p.id))))
-      })
+      projectsApi.listVendor().then(r => setProjects(r.data))
     } else {
       projectsApi.list().then(r => setProjects(r.data))
     }
