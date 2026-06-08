@@ -17,10 +17,6 @@ interface LineRow {
   locked:       boolean         // qty + unitPrice read-only
 }
 
-const EXPENSE_ROW = (): LineRow => ({
-  description: '', quantity: '1', unitPrice: '', lineItemType: 'EXPENSE',
-  receiptNote: '', locked: false,
-})
 
 const TYPE_LABELS: Record<LineItemType, string> = {
   TIME_AND_MATERIALS: 'T&M',
@@ -112,8 +108,11 @@ export default function VendorInvoiceModal({
   const setRow = (i: number, patch: Partial<LineRow>) =>
     setRows(prev => prev.map((r, idx) => idx === i ? { ...r, ...patch } : r))
 
-  const addExpense  = () => setRows(prev => [...prev, EXPENSE_ROW()])
-  const removeRow   = (i: number) => setRows(prev => prev.filter((_, idx) => idx !== i))
+  const addRow = (type: LineItemType) => setRows(prev => [...prev, {
+    description: '', quantity: '1', unitPrice: '', lineItemType: type,
+    receiptNote: '', locked: false,
+  }])
+  const removeRow = (i: number) => setRows(prev => prev.filter((_, idx) => idx !== i))
 
   const handleAutoGenerate = async () => {
     if (!projectId) { setError('Select a project first'); return }
@@ -292,14 +291,22 @@ export default function VendorInvoiceModal({
         <div>
           <div className="flex justify-between items-center mb-2">
             <label className="text-xs font-semibold text-gray-600 uppercase tracking-wide">Line Items</label>
-            <button onClick={addExpense} className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-lg hover:bg-amber-100 flex items-center gap-1">
-              + Add Expense
-            </button>
+            <div className="flex gap-1.5">
+              <button onClick={() => addRow('TIME_AND_MATERIALS')} className="text-xs bg-blue-50 text-blue-700 border border-blue-200 px-2.5 py-1 rounded-lg hover:bg-blue-100">
+                + T&amp;M
+              </button>
+              <button onClick={() => addRow('FIXED')} className="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-2.5 py-1 rounded-lg hover:bg-purple-100">
+                + Fixed
+              </button>
+              <button onClick={() => addRow('EXPENSE')} className="text-xs bg-amber-50 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-lg hover:bg-amber-100">
+                + Expense
+              </button>
+            </div>
           </div>
 
           {rows.length === 0 && (
             <p className="text-xs text-gray-400 text-center py-4 border border-dashed border-gray-200 rounded-lg">
-              No line items yet. Click "+ Add Expense" to add one.
+              No line items yet — add T&amp;M hours, a fixed fee, or an expense above.
             </p>
           )}
 
