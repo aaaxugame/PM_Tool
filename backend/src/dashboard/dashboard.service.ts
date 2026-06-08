@@ -192,21 +192,24 @@ export class DashboardService {
     weekStart.setHours(0, 0, 0, 0);
     const in30 = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-    const assignments = await this.prisma.projectAssignment.findMany({
-      where: { userId, assignmentRole: 'PROJECT_MANAGER' as any },
-      select: { projectId: true },
-    });
+    const [assignments, pendingTimesheets] = await Promise.all([
+      this.prisma.projectAssignment.findMany({
+        where: { userId, assignmentRole: 'PROJECT_MANAGER' as any },
+        select: { projectId: true },
+      }),
+      this.prisma.timesheet.count({ where: { status: 'SUBMITTED' as any } }),
+    ]);
     const projectIds = assignments.map(a => a.projectId);
 
     if (projectIds.length === 0) {
       return {
         projectCount: 0, statusDist: {}, healthDist: { NOT_STARTED: 0, ON_TRACK: 0, AT_RISK: 0, DELAYED: 0 },
         taskHealth: {}, upcomingMilestones: [], overdueTasks: [],
-        hoursThisWeek: '0h 0m', pendingTimesheets: 0, budgetUtilization: [],
+        hoursThisWeek: '0h 0m', pendingTimesheets, budgetUtilization: [],
       };
     }
 
-    const [projects, taskGroups, upcomingMilestones, overdueTasks, weekHours, pendingTimesheets, projectHours] = await Promise.all([
+    const [projects, taskGroups, upcomingMilestones, overdueTasks, weekHours, projectHours] = await Promise.all([
       this.prisma.project.findMany({
         where: { id: { in: projectIds } },
         select: { id: true, name: true, status: true, endDate: true, estimatedHours: true, _count: { select: { tasks: true } }, tasks: { where: { dueDate: { lt: now }, status: { not: 'DONE' as any } }, select: { id: true } } },
@@ -223,7 +226,6 @@ export class DashboardService {
         orderBy: { dueDate: 'asc' }, take: 8,
       }),
       this.prisma.timeEntry.aggregate({ where: { projectId: { in: projectIds }, date: { gte: weekStart } }, _sum: { durationMinutes: true } }),
-      this.prisma.timesheet.count({ where: { status: 'SUBMITTED' as any } }),
       this.prisma.timeEntry.groupBy({ by: ['projectId'], where: { projectId: { in: projectIds } }, _sum: { durationMinutes: true } }),
     ]);
 
