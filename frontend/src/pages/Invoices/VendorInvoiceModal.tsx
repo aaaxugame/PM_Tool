@@ -70,7 +70,7 @@ export default function VendorInvoiceModal({
   const isEdit = !!existingInvoice
 
   // ── Mode ─────────────────────────────────────────────────────────────────
-  const [mode, setMode]               = useState<'choose' | 'auto' | 'manual'>(isEdit || isInternal ? 'manual' : 'choose')
+  const [mode, setMode]               = useState<'choose' | 'auto' | 'manual'>(isEdit ? 'manual' : 'choose')
   const [generating, setGenerating]   = useState(false)
   const [saving, setSaving]           = useState(false)
   const [error, setError]             = useState('')
@@ -203,17 +203,19 @@ export default function VendorInvoiceModal({
     <Modal title="New Vendor Invoice" onClose={onClose}>
       <p className="text-sm text-gray-500 mb-6">How would you like to create this invoice?</p>
 
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <button
-          onClick={() => setMode('auto')}
-          className="flex flex-col items-center gap-3 border-2 border-gray-200 hover:border-blue-400 rounded-xl p-5 transition-colors text-left group"
-        >
-          <span className="text-3xl">⚡</span>
-          <div>
-            <p className="text-sm font-semibold text-gray-800 group-hover:text-blue-700">Auto-generate</p>
-            <p className="text-xs text-gray-500 mt-0.5">Pre-fill from approved hours & completed milestones</p>
-          </div>
-        </button>
+      <div className={`grid gap-4 mb-6 ${isInternal ? 'grid-cols-1 max-w-xs mx-auto' : 'grid-cols-2'}`}>
+        {!isInternal && (
+          <button
+            onClick={() => setMode('auto')}
+            className="flex flex-col items-center gap-3 border-2 border-gray-200 hover:border-blue-400 rounded-xl p-5 transition-colors text-left group"
+          >
+            <span className="text-3xl">⚡</span>
+            <div>
+              <p className="text-sm font-semibold text-gray-800 group-hover:text-blue-700">Auto-generate</p>
+              <p className="text-xs text-gray-500 mt-0.5">Pre-fill from approved hours & completed milestones</p>
+            </div>
+          </button>
+        )}
         <button
           onClick={() => setMode('manual')}
           className="flex flex-col items-center gap-3 border-2 border-gray-200 hover:border-blue-400 rounded-xl p-5 transition-colors text-left group"
