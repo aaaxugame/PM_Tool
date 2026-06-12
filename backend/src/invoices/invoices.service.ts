@@ -535,7 +535,12 @@ export class InvoicesService {
         return true;
       });
 
-      const invoiced   = allInvoices.reduce((s, inv) => s + Number(inv.total), 0);
+      const invoiced   = allInvoices
+        .filter(inv => inv.status !== 'DRAFT')
+        .reduce((s, inv) => s + Number(inv.total), 0);
+      const draft      = allInvoices
+        .filter(inv => inv.status === 'DRAFT')
+        .reduce((s, inv) => s + Number(inv.total), 0);
       const paid       = allInvoices.reduce((s, inv) =>
         s + inv.payments.reduce((ps, p) => ps + Number(p.amount), 0), 0);
       const approved   = allInvoices
@@ -560,6 +565,7 @@ export class InvoicesService {
         projectName: p.name,
         billingMethod: p.billingMethod,
         currency,
+        draft,
         invoiced,
         approved,
         paid,
@@ -581,7 +587,12 @@ export class InvoicesService {
       });
 
       if (standaloneInvoices.length > 0) {
-        const invoiced = standaloneInvoices.reduce((s, inv) => s + Number(inv.total), 0);
+        const invoiced = standaloneInvoices
+          .filter(inv => inv.status !== 'DRAFT')
+          .reduce((s, inv) => s + Number(inv.total), 0);
+        const draft    = standaloneInvoices
+          .filter(inv => inv.status === 'DRAFT')
+          .reduce((s, inv) => s + Number(inv.total), 0);
         const paid     = standaloneInvoices.reduce((s, inv) =>
           s + inv.payments.reduce((ps, p) => ps + Number(p.amount), 0), 0);
         const approved = standaloneInvoices
@@ -596,6 +607,7 @@ export class InvoicesService {
           projectName:   '(Standalone)',
           billingMethod: null as any,
           currency:      'USD',
+          draft,
           invoiced,
           approved,
           paid,

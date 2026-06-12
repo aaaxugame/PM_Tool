@@ -56,13 +56,14 @@ export default function FinancialsPage() {
   // Aggregate totals
   const totals = rows.reduce(
     (acc, r) => ({
+      draft:       acc.draft       + r.draft,
       invoiced:    acc.invoiced    + r.invoiced,
       approved:    acc.approved    + r.approved,
       paid:        acc.paid        + r.paid,
       outstanding: acc.outstanding + r.outstanding,
       pending:     acc.pending     + r.pending,
     }),
-    { invoiced: 0, approved: 0, paid: 0, outstanding: 0, pending: 0 },
+    { draft: 0, invoiced: 0, approved: 0, paid: 0, outstanding: 0, pending: 0 },
   )
 
   const inp = 'border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
@@ -96,8 +97,9 @@ export default function FinancialsPage() {
       </div>
 
       {/* Summary cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <SummaryCard label="Total Invoiced"   value={fmt(totals.invoiced)}    color="bg-white border-gray-200 text-gray-800" />
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+        <SummaryCard label="Draft (Pipeline)" value={fmt(totals.draft)}       sub="not yet sent" color="bg-gray-50 border-gray-200 text-gray-500" />
+        <SummaryCard label="Total Invoiced"   value={fmt(totals.invoiced)}    sub="sent or beyond" color="bg-white border-gray-200 text-gray-800" />
         <SummaryCard label="Pending Review"   value={fmt(totals.pending)}     sub={`${rows.filter(r => r.pending > 0).length} project(s)`} color="bg-blue-50 border-blue-200 text-blue-800" />
         <SummaryCard label="Approved"         value={fmt(totals.approved)}    color="bg-teal-50 border-teal-200 text-teal-800" />
         <SummaryCard label="Paid"             value={fmt(totals.paid)}        color="bg-green-50 border-green-200 text-green-800" />
@@ -116,7 +118,7 @@ export default function FinancialsPage() {
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['Project', 'Billing', 'Invoices', 'Invoiced', 'Approved', 'Paid', 'Outstanding', 'Pending Review'].map(h => (
+                {['Project', 'Billing', 'Invoices', 'Draft', 'Invoiced', 'Approved', 'Paid', 'Outstanding', 'Pending Review'].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-medium text-gray-500 uppercase">{h}</th>
                 ))}
               </tr>
@@ -156,6 +158,7 @@ export default function FinancialsPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-500 text-center">{row.invoiceCount}</td>
+                    <td className="px-4 py-3 font-mono text-gray-400">{row.draft > 0 ? fmt(row.draft, row.currency) : <span className="text-gray-200">—</span>}</td>
                     <td className="px-4 py-3 font-mono text-gray-700">{fmt(row.invoiced, row.currency)}</td>
                     <td className="px-4 py-3 font-mono text-teal-700">{fmt(row.approved, row.currency)}</td>
                     <td className="px-4 py-3 font-mono text-green-700">{fmt(row.paid, row.currency)}</td>
@@ -185,6 +188,7 @@ export default function FinancialsPage() {
             <tfoot className="bg-gray-50 border-t-2 border-gray-200">
               <tr>
                 <td className="px-4 py-3 font-semibold text-gray-700" colSpan={3}>Totals</td>
+                <td className="px-4 py-3 font-mono font-semibold text-gray-400">{fmt(totals.draft)}</td>
                 <td className="px-4 py-3 font-mono font-semibold text-gray-800">{fmt(totals.invoiced)}</td>
                 <td className="px-4 py-3 font-mono font-semibold text-teal-700">{fmt(totals.approved)}</td>
                 <td className="px-4 py-3 font-mono font-semibold text-green-700">{fmt(totals.paid)}</td>

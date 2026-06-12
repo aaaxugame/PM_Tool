@@ -91,6 +91,7 @@ export interface FinancialRow {
   projectName:  string
   billingMethod:string
   currency:     string
+  draft:        number
   invoiced:     number
   approved:     number
   paid:         number
