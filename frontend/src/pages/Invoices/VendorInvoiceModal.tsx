@@ -70,7 +70,7 @@ export default function VendorInvoiceModal({
   const isEdit = !!existingInvoice
 
   // ── Mode ─────────────────────────────────────────────────────────────────
-  const [mode, setMode]               = useState<'choose' | 'auto' | 'manual'>(isEdit ? 'manual' : 'choose')
+  const [mode, setMode]               = useState<'choose' | 'auto' | 'manual'>(isEdit || isInternal ? 'manual' : 'choose')
   const [generating, setGenerating]   = useState(false)
   const [saving, setSaving]           = useState(false)
   const [error, setError]             = useState('')
