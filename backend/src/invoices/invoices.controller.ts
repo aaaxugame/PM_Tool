@@ -109,6 +109,8 @@ export class InvoicesController {
     return this.invoicesService.findOne(id);
   }
 
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER')
   @Post()
   create(@Body() dto: CreateInvoiceDto, @Req() req: any) {
     return this.invoicesService.create(dto, req.user.id);

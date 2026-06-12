@@ -125,14 +125,18 @@ export default function FinancialsPage() {
               {rows.map(row => {
                 const pctPaid = row.invoiced > 0 ? (row.paid / row.invoiced) * 100 : 0
                 return (
-                  <tr key={row.projectId} className="hover:bg-gray-50">
+                  <tr key={row.projectId ?? 'standalone'} className="hover:bg-gray-50">
                     <td className="px-4 py-3">
-                      <button
-                        onClick={() => navigate(`/projects/${row.projectId}`)}
-                        className="font-medium text-blue-600 hover:underline text-left"
-                      >
-                        {row.projectName}
-                      </button>
+                      {row.projectId != null ? (
+                        <button
+                          onClick={() => navigate(`/projects/${row.projectId}`)}
+                          className="font-medium text-blue-600 hover:underline text-left"
+                        >
+                          {row.projectName}
+                        </button>
+                      ) : (
+                        <span className="font-medium text-gray-500 italic">{row.projectName}</span>
+                      )}
                       {/* Mini progress bar */}
                       <div className="mt-1.5 h-1 w-32 bg-gray-100 rounded-full overflow-hidden">
                         <div
@@ -144,7 +148,7 @@ export default function FinancialsPage() {
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="bg-gray-100 text-gray-600 text-xs px-2 py-0.5 rounded-full">
-                          {BILLING_LABELS[row.billingMethod] ?? row.billingMethod}
+                          {BILLING_LABELS[row.billingMethod] ?? row.billingMethod ?? '—'}
                         </span>
                         <span className="bg-blue-50 text-blue-600 text-xs px-2 py-0.5 rounded-full font-medium">
                           {row.currency}

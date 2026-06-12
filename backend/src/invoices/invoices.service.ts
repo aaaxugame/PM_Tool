@@ -528,7 +528,7 @@ export class InvoicesService {
       orderBy: { createdAt: 'desc' },
     });
 
-    return projects.map(p => {
+    const projectRows = projects.map(p => {
       const allInvoices = p.invoices.filter(inv => {
         if (filters.vendorId && inv.vendorId !== filters.vendorId) return false;
         if (filters.clientId && inv.clientId !== filters.clientId) return false;
@@ -568,6 +568,45 @@ export class InvoicesService {
         invoiceCount: allInvoices.length,
       };
     });
+
+    // Include standalone invoices (no project) when not filtering by project
+    if (!filters.projectId) {
+      const standaloneInvoices = await this.prisma.invoice.findMany({
+        where: {
+          projectId: null,
+          ...(filters.vendorId ? { vendorId: filters.vendorId } : {}),
+          ...(filters.clientId ? { clientId: filters.clientId } : {}),
+        },
+        include: { payments: { select: { amount: true } } },
+      });
+
+      if (standaloneInvoices.length > 0) {
+        const invoiced = standaloneInvoices.reduce((s, inv) => s + Number(inv.total), 0);
+        const paid     = standaloneInvoices.reduce((s, inv) =>
+          s + inv.payments.reduce((ps, p) => ps + Number(p.amount), 0), 0);
+        const approved = standaloneInvoices
+          .filter(inv => ['APPROVED', 'PAID'].includes(inv.status))
+          .reduce((s, inv) => s + Number(inv.total), 0);
+        const pending  = standaloneInvoices
+          .filter(inv => inv.status === 'SUBMITTED')
+          .reduce((s, inv) => s + Number(inv.total), 0);
+
+        projectRows.push({
+          projectId:     null as any,
+          projectName:   '(Standalone)',
+          billingMethod: null as any,
+          currency:      'USD',
+          invoiced,
+          approved,
+          paid,
+          outstanding:   invoiced - paid,
+          pending,
+          invoiceCount:  standaloneInvoices.length,
+        });
+      }
+    }
+
+    return projectRows;
   }
 
   // ── Delete ───────────────────────────────────────────────────────────────────
