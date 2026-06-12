@@ -157,7 +157,7 @@ export default function InvoicesPage() {
   // ── Status list per tab ──────────────────────────────────────────────────
 
   const allStatuses: InvoiceStatus[] = tab === 'CLIENT'
-    ? ['DRAFT', 'SENT', 'APPROVED', 'PAID', 'OVERDUE']
+    ? (isClient ? ['SENT', 'APPROVED', 'PAID', 'OVERDUE'] : ['DRAFT', 'SENT', 'APPROVED', 'PAID', 'OVERDUE'])
     : ['DRAFT', 'SUBMITTED', 'REVISION_REQUESTED', 'APPROVED', 'REJECTED', 'PAID']
 
   const inp = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500'
