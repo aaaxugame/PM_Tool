@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { MailService } from '../mail/mail.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { UpdateInvoiceDto } from './dto/update-invoice.dto';
 import { InvoiceStatus, InvoiceType, BillingMethod } from '@prisma/client';
@@ -32,19 +33,24 @@ const INVOICE_INCLUDE = {
 
 @Injectable()
 export class InvoicesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private mail:   MailService,
+  ) {}
 
   // ── Read ────────────────────────────────────────────────────────────────────
 
   findAll(filters: {
     clientId?: number; projectId?: number; vendorId?: number;
     status?: InvoiceStatus; invoiceType?: InvoiceType;
+    excludeStatuses?: InvoiceStatus[];
   } = {}) {
     const where: any = {};
     if (filters.clientId)    where.clientId    = filters.clientId;
     if (filters.projectId)   where.projectId   = filters.projectId;
     if (filters.vendorId)    where.vendorId    = filters.vendorId;
-    if (filters.status)      where.status      = filters.status;
+    if (filters.status)                        where.status = filters.status;
+    else if (filters.excludeStatuses?.length)  where.status = { notIn: filters.excludeStatuses };
     if (filters.invoiceType) where.invoiceType = filters.invoiceType;
     return this.prisma.invoice.findMany({
       where,
@@ -348,7 +354,35 @@ export class InvoicesService {
       };
     }
 
-    return this.prisma.invoice.update({ where: { id }, data, include: INVOICE_INCLUDE });
+    const updated = await this.prisma.invoice.update({ where: { id }, data, include: INVOICE_INCLUDE });
+
+    // Fire notification when a CLIENT invoice is marked SENT
+    if (dto.status === 'SENT' && inv.status === 'DRAFT' && updated.invoiceType === 'CLIENT') {
+      const client = updated.clientId
+        ? await this.prisma.client.findUnique({
+            where:  { id: updated.clientId },
+            select: { name: true, contactEmail: true },
+          })
+        : null;
+
+      if (client?.contactEmail) {
+        const dueDate = updated.dueDate
+          ? new Date(updated.dueDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+          : 'N/A';
+        this.mail.sendInvoiceSent({
+          toEmail:       client.contactEmail,
+          toName:        client.name,
+          invoiceNumber: `#${String(updated.id).padStart(4, '0')}`,
+          projectName:   (updated as any).project?.name ?? 'N/A',
+          total:         Number(updated.total).toFixed(2),
+          currency:      updated.currency ?? 'USD',
+          dueDate,
+          fromName:      'PM Tool',
+        }).catch(() => {}); // fire-and-forget, don't block the response
+      }
+    }
+
+    return updated;
   }
 
   // ── Submit (vendor) — locks referenced time entries ─────────────────────────

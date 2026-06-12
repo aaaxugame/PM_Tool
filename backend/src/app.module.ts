@@ -12,10 +12,12 @@ import { QuotesBudgetsModule } from './quotes-budgets/quotes-budgets.module';
 import { InvoicesModule } from './invoices/invoices.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { DocumentsModule } from './documents/documents.module';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: join(__dirname, '..', '..', '.env') }),
+    MailModule,
     PrismaModule,
     UsersModule,
     AuthModule,

@@ -68,15 +68,18 @@ export class InvoicesController {
   ) {
     const roles: string[] = req.user.roles ?? [];
 
-    // CLIENT users can only see their own client invoices — enforce server-side
+    // CLIENT users can only see SENT+ invoices for their own company — enforce server-side
+    const CLIENT_VISIBLE_STATUSES: InvoiceStatus[] = ['SENT', 'APPROVED', 'PAID', 'OVERDUE'];
     if (roles.includes('CLIENT')) {
       const scopedClientId = req.user.client?.id;
       if (!scopedClientId) return [];
+      const safeStatus = status && CLIENT_VISIBLE_STATUSES.includes(status) ? status : undefined;
       return this.invoicesService.findAll({
-        clientId:    scopedClientId,
-        invoiceType: 'CLIENT',
-        projectId:   projectId ? Number(projectId) : undefined,
-        status,
+        clientId:        scopedClientId,
+        invoiceType:     'CLIENT',
+        projectId:       projectId ? Number(projectId) : undefined,
+        status:          safeStatus,
+        excludeStatuses: ['DRAFT'],
       });
     }
 
