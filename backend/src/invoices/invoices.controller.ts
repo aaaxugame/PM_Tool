@@ -110,9 +110,13 @@ export class InvoicesController {
   }
 
   @UseGuards(RolesGuard)
-  @Roles('SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER')
+  @Roles('SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER', 'CONTRACTOR', 'VENDOR_CONTACT')
   @Post()
   create(@Body() dto: CreateInvoiceDto, @Req() req: any) {
+    const isVendorUser = req.user.roles?.some((r: string) => ['CONTRACTOR', 'VENDOR_CONTACT'].includes(r));
+    if (isVendorUser && dto.invoiceType === 'CLIENT') {
+      throw new ForbiddenException('Vendor users cannot create client invoices');
+    }
     return this.invoicesService.create(dto, req.user.id);
   }
 
