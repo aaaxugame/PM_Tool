@@ -119,6 +119,7 @@ model Vendor {
   billingRates      BillingRate[]
   invoices          Invoice[]
   requestedProjects Project[] @relation("ProjectRequestedBy")
+  assignedProjects  Project[] @relation("ProjectAssignedVendor")
 
   @@map("vendors")
 }
@@ -131,6 +132,7 @@ model Project {
   description        String?
   status             ProjectStatus   @default(DRAFT)
   approvalStatus     ProjectApproval @default(PENDING)
+  projectType        ProjectType     @default(INTERNAL)
   priority           Priority        @default(MEDIUM)
   billingMethod      BillingMethod   @default(TIME_AND_MATERIALS)
   startDate          DateTime?
@@ -150,6 +152,8 @@ model Project {
   createdById Int
   requestingVendor   Vendor? @relation("ProjectRequestedBy", fields: [requestingVendorId], references: [id])
   requestingVendorId Int?
+  assignedVendor     Vendor? @relation("ProjectAssignedVendor", fields: [assignedVendorId], references: [id])
+  assignedVendorId   Int?
 
   assignments   ProjectAssignment[]
   members       ProjectMember[]
@@ -164,6 +168,11 @@ model Project {
   documents     Document[]
 
   @@map("projects")
+}
+
+enum ProjectType {
+  INTERNAL
+  VENDOR
 }
 
 enum ProjectStatus {

@@ -6,6 +6,17 @@ export type MilestoneStatus = 'PENDING' | 'COMPLETED'
 export type ProjectPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
 export type ProjectApproval = 'PENDING' | 'APPROVED' | 'REJECTED'
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH'
+export type ProjectType = 'INTERNAL' | 'VENDOR'
+
+export interface ProjectMember {
+  id: number
+  projectId: number
+  userId: number
+  hourlyRate: string | null
+  isBillable: boolean
+  createdAt: string
+  user: { id: number; name: string; email: string }
+}
 
 export interface Project {
   id: number
@@ -13,6 +24,7 @@ export interface Project {
   description: string | null
   status: ProjectStatus
   approvalStatus: ProjectApproval
+  projectType: ProjectType
   priority: ProjectPriority
   billingMethod: BillingMethod
   startDate: string | null
@@ -27,10 +39,13 @@ export interface Project {
   estimatedHours: string | null
   proposedWorkers: number | null
   requestingVendorId: number | null
+  assignedVendorId: number | null
   client: { id: number; name: string; currency: string } | null
   createdBy: { id: number; name: string }
   requestingVendor: { id: number; name: string } | null
+  assignedVendor: { id: number; name: string } | null
   assignments: { assignmentRole: string; user: { id: number; name: string } }[]
+  members?: ProjectMember[]
   _count: { milestones: number; tasks: number }
 }
 
@@ -80,6 +95,12 @@ export const projectsApi = {
   create: (data: Record<string, unknown>) => api.post<Project>('/projects', data),
   update: (id: number, data: Record<string, unknown>) => api.patch<Project>(`/projects/${id}`, data),
   remove: (id: number) => api.delete(`/projects/${id}`),
+}
+
+export const projectMembersApi = {
+  list: (projectId: number) => api.get<ProjectMember[]>(`/projects/${projectId}/members`),
+  add: (projectId: number, userId: number) => api.post<ProjectMember>(`/projects/${projectId}/members`, { userId }),
+  remove: (projectId: number, userId: number) => api.delete(`/projects/${projectId}/members/${userId}`),
 }
 
 export const milestonesApi = {

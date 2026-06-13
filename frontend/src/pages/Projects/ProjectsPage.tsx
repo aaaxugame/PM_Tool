@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { projectsApi, type Project, type ProjectStatus, type BillingMethod, type ProjectPriority, type RiskLevel, type ProjectFilters } from '../../api/projects'
+import { projectsApi, projectMembersApi, type Project, type ProjectStatus, type BillingMethod, type ProjectPriority, type RiskLevel, type ProjectFilters, type ProjectType } from '../../api/projects'
 import { clientsApi, vendorsApi, usersApi, type Client, type Vendor, type SimpleUser } from '../../api/organizations'
 import { useAuth } from '../../store/authContext'
 import Modal from '../../components/Modal'
@@ -311,11 +311,12 @@ const PM_EMPTY = {
   category: '',
   description: '',
   status: 'DRAFT' as ProjectStatus,
+  projectType: 'INTERNAL' as ProjectType,
   priority: 'MEDIUM' as ProjectPriority,
   billingMethod: 'TIME_AND_MATERIALS' as BillingMethod,
   riskLevel: '' as RiskLevel | '',
   clientId: 0,
-  vendorId: 0,
+  assignedVendorId: 0,
   pmId: 0,
   amId: 0,
   startDate: '',
@@ -332,6 +333,7 @@ function ProjectCreationModal({
   vendors,
   pms,
   ams,
+  teamMembers,
   onClose,
   onSaved,
 }: {
@@ -340,6 +342,7 @@ function ProjectCreationModal({
   vendors: Vendor[]
   pms: SimpleUser[]
   ams: SimpleUser[]
+  teamMembers: SimpleUser[]
   onClose: () => void
   onSaved: () => void
 }) {
@@ -353,11 +356,12 @@ function ProjectCreationModal({
     category: project?.category ?? '',
     description: project?.description ?? '',
     status: project?.status ?? 'DRAFT' as ProjectStatus,
+    projectType: project?.projectType ?? 'INTERNAL' as ProjectType,
     priority: project?.priority ?? 'MEDIUM' as ProjectPriority,
     billingMethod: project?.billingMethod ?? 'TIME_AND_MATERIALS' as BillingMethod,
     riskLevel: (project?.riskLevel ?? '') as RiskLevel | '',
     clientId: project?.clientId ?? 0,
-    vendorId: project?.requestingVendorId ?? 0,
+    assignedVendorId: project?.assignedVendorId ?? 0,
     pmId: isEditing ? getPmId() : 0,
     amId: isEditing ? getAmId() : 0,
     startDate: project?.startDate ? project.startDate.slice(0, 10) : '',
@@ -367,8 +371,14 @@ function ProjectCreationModal({
     proposedWorkers: project?.proposedWorkers?.toString() ?? '',
     requiredSkillSet: project?.requiredSkillSet ?? '',
   })
+  const [selectedMembers, setSelectedMembers] = useState<number[]>(
+    project?.members?.map(m => m.userId) ?? []
+  )
   const [saving, setSaving] = useState(false)
   const set = (key: string, val: unknown) => setForm(p => ({ ...p, [key]: val }))
+
+  const toggleMember = (uid: number) =>
+    setSelectedMembers(prev => prev.includes(uid) ? prev.filter(id => id !== uid) : [...prev, uid])
 
   const handleSave = async (draft: boolean) => {
     setSaving(true)
@@ -391,14 +401,31 @@ function ProjectCreationModal({
         proposedWorkers: form.proposedWorkers ? parseInt(form.proposedWorkers) : undefined,
         requiredSkillSet: form.requiredSkillSet || undefined,
       }
-      if (!isEditing) {
-        payload.approvalStatus = 'APPROVED'
+      if (form.projectType === 'VENDOR') {
+        payload.assignedVendorId = form.assignedVendorId || undefined
       }
+      let savedId: number
       if (isEditing) {
-        await projectsApi.update(project.id, payload)
+        const res = await projectsApi.update(project.id, payload)
+        savedId = res.data.id
       } else {
-        await projectsApi.create(payload)
+        payload.projectType = form.projectType
+        payload.approvalStatus = 'APPROVED'
+        const res = await projectsApi.create(payload)
+        savedId = res.data.id
       }
+
+      // Sync team members for INTERNAL projects
+      if (form.projectType === 'INTERNAL') {
+        const prev = project?.members?.map(m => m.userId) ?? []
+        const toAdd = selectedMembers.filter(id => !prev.includes(id))
+        const toRemove = prev.filter(id => !selectedMembers.includes(id))
+        await Promise.all([
+          ...toAdd.map(uid => projectMembersApi.add(savedId, uid)),
+          ...toRemove.map(uid => projectMembersApi.remove(savedId, uid)),
+        ])
+      }
+
       onSaved()
       onClose()
     } finally { setSaving(false) }
@@ -411,6 +438,31 @@ function ProjectCreationModal({
   return (
     <Modal title={isEditing ? 'Edit Project' : 'Create Project'} onClose={onClose}>
       <div className="space-y-5">
+
+        {/* Project Type — create only, locked after creation */}
+        {!isEditing && (
+          <div>
+            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Project Type</h3>
+            <div className="flex gap-3">
+              {(['INTERNAL', 'VENDOR'] as ProjectType[]).map(t => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => set('projectType', t)}
+                  className={`flex-1 py-2 px-4 rounded-lg border text-sm font-medium transition-colors ${
+                    form.projectType === t
+                      ? t === 'INTERNAL'
+                        ? 'bg-blue-50 border-blue-500 text-blue-700'
+                        : 'bg-purple-50 border-purple-500 text-purple-700'
+                      : 'border-gray-300 text-gray-500 hover:border-gray-400'
+                  }`}
+                >
+                  {t === 'INTERNAL' ? '🏢 Internal' : '🤝 Vendor'}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Basic Information */}
         <div>
@@ -428,13 +480,25 @@ function ProjectCreationModal({
                   {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Vendor</label>
-                <select value={form.vendorId} onChange={e => set('vendorId', Number(e.target.value))} className={inp}>
-                  <option value={0}>— select vendor —</option>
-                  {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-                </select>
-              </div>
+              {form.projectType === 'VENDOR' && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Assigned Vendor</label>
+                  {isEditing && project?.requestingVendorId ? (
+                    <div className="flex flex-col gap-1">
+                      <p className="text-xs text-gray-500">Originated by: <span className="font-medium text-gray-700">{project.requestingVendor?.name}</span></p>
+                      <select value={form.assignedVendorId} onChange={e => set('assignedVendorId', Number(e.target.value))} className={inp}>
+                        <option value={0}>— select vendor —</option>
+                        {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                      </select>
+                    </div>
+                  ) : (
+                    <select value={form.assignedVendorId} onChange={e => set('assignedVendorId', Number(e.target.value))} className={inp}>
+                      <option value={0}>— select vendor —</option>
+                      {vendors.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
+                    </select>
+                  )}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
@@ -515,11 +579,35 @@ function ProjectCreationModal({
         {/* Resources */}
         <div>
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Resources</h3>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Vendor Workers</label>
-              <input type="number" min="0" value={form.proposedWorkers} onChange={e => set('proposedWorkers', e.target.value)} className={inp} />
-            </div>
+          <div className="space-y-3">
+            {form.projectType === 'INTERNAL' ? (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-2">Team Members</label>
+                <div className="border border-gray-200 rounded-lg divide-y divide-gray-100 max-h-40 overflow-y-auto">
+                  {teamMembers.length === 0 ? (
+                    <p className="px-3 py-2 text-xs text-gray-400">No team members found.</p>
+                  ) : teamMembers.map(u => (
+                    <label key={u.id} className="flex items-center gap-2 px-3 py-2 hover:bg-gray-50 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedMembers.includes(u.id)}
+                        onChange={() => toggleMember(u.id)}
+                        className="rounded border-gray-300 text-blue-600"
+                      />
+                      <span className="text-sm text-gray-700">{u.name}</span>
+                      <span className="text-xs text-gray-400">{u.email}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-600 mb-1">Vendor Workers (count)</label>
+                  <input type="number" min="0" value={form.proposedWorkers} onChange={e => set('proposedWorkers', e.target.value)} className={inp} />
+                </div>
+              </div>
+            )}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Required Skill Set</label>
               <input type="text" value={form.requiredSkillSet} onChange={e => set('requiredSkillSet', e.target.value)} placeholder="e.g. React, Node.js…" className={inp} />
@@ -864,6 +952,7 @@ export default function ProjectsPage() {
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [pms, setPms] = useState<SimpleUser[]>([])
   const [ams, setAms] = useState<SimpleUser[]>([])
+  const [teamMembers, setTeamMembers] = useState<SimpleUser[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<null | 'create' | Project>(null)
   const [saving, setSaving] = useState(false)
@@ -908,6 +997,7 @@ export default function ProjectsPage() {
       vendorsApi.list().then(r => setVendors(r.data))
       usersApi.listByRole('PROJECT_MANAGER').then(r => setPms(r.data))
       usersApi.listByRole('ACCOUNT_MANAGER').then(r => setAms(r.data))
+      usersApi.listByRole('TEAM_MEMBER').then(r => setTeamMembers(r.data))
     }
   }, [canManage])
 
@@ -997,6 +1087,7 @@ export default function ProjectsPage() {
           vendors={vendors}
           pms={pms}
           ams={ams}
+          teamMembers={teamMembers}
           onClose={closeModal}
           onSaved={() => loadProjects(activeTab)}
         />

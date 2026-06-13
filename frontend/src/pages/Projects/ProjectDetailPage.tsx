@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../store/authContext'
-import { projectsApi, milestonesApi, type ProjectDetail, type Milestone, type MilestoneStatus, type ProjectPriority } from '../../api/projects'
+import { projectsApi, projectMembersApi, milestonesApi, type ProjectDetail, type ProjectMember, type Milestone, type MilestoneStatus, type ProjectPriority } from '../../api/projects'
 import { tasksApi, type Task, type TaskStatus } from '../../api/tasks'
-import { usersApi, type User } from '../../api/organizations'
+import { usersApi, type User, type SimpleUser } from '../../api/organizations'
 import { vendorQuotesApi, budgetsApi, type VendorQuote, type Budget, type QuoteStatus, type PaymentMode } from '../../api/quotesBudgets'
 import { vendorsApi, type Vendor } from '../../api/organizations'
 import Modal from '../../components/Modal'
@@ -58,6 +58,7 @@ export default function ProjectDetailPage() {
   const { t } = useTranslation()
   const { hasRole } = useAuth()
   const isVendor = hasRole('CONTRACTOR') || hasRole('VENDOR_CONTACT')
+  const canManage = hasRole('ADMIN') || hasRole('SUPER_ADMIN') || hasRole('ACCOUNT_MANAGER') || hasRole('PROJECT_MANAGER')
   const projectId = Number(id)
 
   const [project, setProject] = useState<ProjectDetail | null>(null)
@@ -66,6 +67,9 @@ export default function ProjectDetailPage() {
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [quotes, setQuotes] = useState<VendorQuote[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
+  const [members, setMembers] = useState<ProjectMember[]>([])
+  const [availableMembers, setAvailableMembers] = useState<SimpleUser[]>([])
+  const [addMemberOpen, setAddMemberOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<ActiveTab>('work')
 
@@ -94,12 +98,14 @@ export default function ProjectDetailPage() {
   const loadTasks = () => tasksApi.list({ projectId }).then(r => setTasks(r.data))
   const loadQuotes = () => vendorQuotesApi.list({ projectId }).then(r => setQuotes(r.data))
   const loadBudgets = () => budgetsApi.list({ projectId }).then(r => setBudgets(r.data))
+  const loadMembers = () => projectMembersApi.list(projectId).then(r => setMembers(r.data))
 
   useEffect(() => {
     Promise.all([
-      loadProject(), loadTasks(), loadQuotes(), loadBudgets(),
+      loadProject(), loadTasks(), loadQuotes(), loadBudgets(), loadMembers(),
       usersApi.list().then(r => setUsers(r.data)),
       vendorsApi.list().then(r => setVendors(r.data)),
+      usersApi.listByRole('TEAM_MEMBER').then(r => setAvailableMembers(r.data)),
     ]).finally(() => setLoading(false))
   }, [projectId])
 
@@ -216,7 +222,7 @@ export default function ProjectDetailPage() {
 
   const TABS: { key: ActiveTab; label: string }[] = [
     { key: 'work', label: `Work (${project.milestones.length}M · ${tasks.length}T)` },
-    { key: 'quotes', label: `Quotes (${quotes.length})` },
+    ...(project.projectType === 'VENDOR' ? [{ key: 'quotes' as ActiveTab, label: `Quotes (${quotes.length})` }] : []),
     { key: 'budget', label: `Budget (${budgets.length})` },
     { key: 'documents', label: 'Documents' },
   ]
@@ -244,6 +250,12 @@ export default function ProjectDetailPage() {
           { label: t('projects.billingMethod'), value: project.billingMethod.replace(/_/g, ' ') },
           { label: t('projects.startDate'), value: project.startDate ? project.startDate.slice(0, 10) : '—' },
           { label: t('projects.endDate'), value: project.endDate ? project.endDate.slice(0, 10) : '—' },
+          ...(project.projectType === 'VENDOR' && project.requestingVendor
+            ? [{ label: 'Originated By', value: project.requestingVendor.name }]
+            : []),
+          ...(project.projectType === 'VENDOR' && project.assignedVendor
+            ? [{ label: 'Assigned Vendor', value: project.assignedVendor.name }]
+            : []),
         ].map(card => (
           <div key={card.label} className="bg-white rounded-xl border border-gray-200 px-4 py-3">
             <p className="text-xs text-gray-500 mb-0.5">{card.label}</p>
@@ -258,6 +270,69 @@ export default function ProjectDetailPage() {
           </span>
         </div>
       </div>
+
+      {/* Team Members panel — INTERNAL projects only */}
+      {project.projectType === 'INTERNAL' && (
+        <div className="bg-white rounded-xl border border-gray-200 px-5 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-700">Team Members</h2>
+            {canManage && (
+              <button
+                onClick={() => setAddMemberOpen(v => !v)}
+                className="text-xs text-blue-600 hover:underline"
+              >
+                + Add Member
+              </button>
+            )}
+          </div>
+
+          {addMemberOpen && canManage && (
+            <div className="mb-3 flex gap-2">
+              <select
+                className="flex-1 border border-gray-300 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                defaultValue=""
+                onChange={async e => {
+                  const uid = Number(e.target.value)
+                  if (!uid) return
+                  await projectMembersApi.add(projectId, uid)
+                  loadMembers()
+                  setAddMemberOpen(false)
+                }}
+              >
+                <option value="">— select team member —</option>
+                {availableMembers
+                  .filter(u => !members.some(m => m.userId === u.id))
+                  .map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              </select>
+              <button onClick={() => setAddMemberOpen(false)} className="text-xs text-gray-400 hover:text-gray-600">Cancel</button>
+            </div>
+          )}
+
+          {members.length === 0 ? (
+            <p className="text-sm text-gray-400">No team members assigned yet.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {members.map(m => (
+                <div key={m.id} className="flex items-center gap-1.5 bg-gray-100 rounded-full px-3 py-1">
+                  <span className="text-sm text-gray-700">{m.user.name}</span>
+                  {canManage && (
+                    <button
+                      onClick={async () => {
+                        await projectMembersApi.remove(projectId, m.userId)
+                        loadMembers()
+                      }}
+                      className="text-gray-400 hover:text-red-500 text-xs leading-none ml-1"
+                      title="Remove"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Tabs */}
       <div>

@@ -77,4 +77,22 @@ export class ProjectsController {
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.projectsService.remove(id);
   }
+
+  @Get(':id/members')
+  listMembers(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.listMembers(id);
+  }
+
+  @Post(':id/members')
+  addMember(@Param('id', ParseIntPipe) id: number, @Body('userId', ParseIntPipe) userId: number) {
+    return this.projectsService.addMember(id, userId);
+  }
+
+  @Delete(':id/members/:userId')
+  removeMember(
+    @Param('id', ParseIntPipe) id: number,
+    @Param('userId', ParseIntPipe) userId: number,
+  ) {
+    return this.projectsService.removeMember(id, userId);
+  }
 }

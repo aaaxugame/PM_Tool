@@ -8,6 +8,7 @@ const PROJECT_INCLUDE = {
   client: { select: { id: true, name: true, currency: true } },
   createdBy: { select: { id: true, name: true } },
   requestingVendor: { select: { id: true, name: true } },
+  assignedVendor: { select: { id: true, name: true } },
   assignments: {
     include: { user: { select: { id: true, name: true } } },
   },
@@ -39,7 +40,15 @@ export class ProjectsService {
     }
 
     if (filters.clientId) where.clientId = filters.clientId;
-    if (filters.vendorId) where.vendorQuotes = { some: { vendorId: filters.vendorId } };
+    if (filters.vendorId) {
+      andConditions.push({
+        OR: [
+          { requestingVendorId: filters.vendorId },
+          { assignedVendorId: filters.vendorId },
+          { vendorQuotes: { some: { vendorId: filters.vendorId } } },
+        ],
+      });
+    }
     if (filters.pmId) {
       andConditions.push({ assignments: { some: { userId: filters.pmId, assignmentRole: 'PROJECT_MANAGER' } } });
     }
@@ -119,7 +128,9 @@ export class ProjectsService {
         client: { select: { id: true, name: true, currency: true } },
         createdBy: { select: { id: true, name: true } },
         requestingVendor: { select: { id: true, name: true } },
+        assignedVendor: { select: { id: true, name: true } },
         assignments: { include: { user: { select: { id: true, name: true } } } },
+        members: { include: { user: { select: { id: true, name: true, email: true } } }, orderBy: { createdAt: 'asc' } },
         milestones: { orderBy: { dueDate: 'asc' } },
         _count: { select: { tasks: true, timeEntries: true } },
       },
@@ -149,8 +160,13 @@ export class ProjectsService {
   }
 
   async update(id: number, dto: UpdateProjectDto, userId: number) {
-    await this.findOne(id);
-    const { startDate, endDate, pmId, amId, ...rest } = dto as any;
+    const existing = await this.findOne(id);
+    const { startDate, endDate, pmId, amId, projectType, ...rest } = dto as any;
+
+    // Lock requestingVendorId once set — cannot be overwritten via update
+    if (existing.requestingVendorId) {
+      delete rest.requestingVendorId;
+    }
 
     const project = await this.prisma.project.update({
       where: { id },
@@ -183,6 +199,28 @@ export class ProjectsService {
     }
 
     return project;
+  }
+
+  listMembers(projectId: number) {
+    return this.prisma.projectMember.findMany({
+      where: { projectId },
+      include: { user: { select: { id: true, name: true, email: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  async addMember(projectId: number, userId: number) {
+    await this.findOne(projectId);
+    return this.prisma.projectMember.upsert({
+      where: { projectId_userId: { projectId, userId } },
+      update: {},
+      create: { projectId, userId },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+  }
+
+  async removeMember(projectId: number, userId: number) {
+    await this.prisma.projectMember.deleteMany({ where: { projectId, userId } });
   }
 
   async remove(id: number) {
