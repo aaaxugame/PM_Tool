@@ -846,9 +846,11 @@ function VendorRequestsTab() {
 function AllProjectsTab({
   onEdit,
   onDelete,
+  refreshKey,
 }: {
   onEdit: (p: Project) => void
   onDelete: (id: number) => void
+  refreshKey: number
 }) {
   const { t } = useTranslation()
   const [projects, setProjects] = useState<Project[]>([])
@@ -871,7 +873,7 @@ function AllProjectsTab({
   useEffect(() => {
     setLoading(true)
     projectsApi.list(filters).then(r => setProjects(r.data)).finally(() => setLoading(false))
-  }, [filters])
+  }, [filters, refreshKey])
 
   const setFilter = (key: keyof ProjectFilters, val: string) =>
     setFilters(prev => ({ ...prev, [key]: val ? Number(val) : undefined }))
@@ -956,6 +958,7 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<null | 'create' | Project>(null)
   const [saving, setSaving] = useState(false)
+  const [allProjectsRefreshKey, setAllProjectsRefreshKey] = useState(0)
 
   const isVendor = hasRole('VENDOR_CONTACT') || hasRole('CONTRACTOR')
   const isClient = hasRole('CLIENT')
@@ -1008,6 +1011,7 @@ export default function ProjectsPage() {
   const handleDelete = async (id: number) => {
     if (!confirm('Delete this project? This will also delete all milestones and tasks.')) return
     await projectsApi.remove(id)
+    setAllProjectsRefreshKey(k => k + 1)
     loadProjects(activeTab)
   }
 
@@ -1050,7 +1054,7 @@ export default function ProjectsPage() {
       </div>
 
       {isAllProjectsTab ? (
-        <AllProjectsTab onEdit={openEdit} onDelete={handleDelete} />
+        <AllProjectsTab onEdit={openEdit} onDelete={handleDelete} refreshKey={allProjectsRefreshKey} />
       ) : isVendorRequestsTab ? (
         <VendorRequestsTab />
       ) : (
@@ -1089,7 +1093,7 @@ export default function ProjectsPage() {
           ams={ams}
           teamMembers={teamMembers}
           onClose={closeModal}
-          onSaved={() => loadProjects(activeTab)}
+          onSaved={() => { setAllProjectsRefreshKey(k => k + 1); loadProjects(activeTab) }}
         />
       )}
     </div>
