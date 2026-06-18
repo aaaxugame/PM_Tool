@@ -29,7 +29,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
-    await authApi.logout()
+    try {
+      await authApi.logout()
+    } catch {
+      // server-side logout failed; clear local state regardless
+    }
     setUser(null)
   }
 

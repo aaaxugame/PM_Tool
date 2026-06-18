@@ -10,11 +10,23 @@ export default function ClientsTab() {
   const { t } = useTranslation()
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [modal, setModal] = useState<null | 'create' | Client>(null)
   const [form, setForm] = useState<Partial<Client>>(EMPTY)
   const [saving, setSaving] = useState(false)
 
-  const load = () => clientsApi.list().then(r => setClients(r.data)).finally(() => setLoading(false))
+  const load = async () => {
+    setLoading(true)
+    setLoadError(false)
+    try {
+      const res = await clientsApi.list()
+      setClients(res.data)
+    } catch {
+      setLoadError(true)
+    } finally {
+      setLoading(false)
+    }
+  }
   useEffect(() => { load() }, [])
 
   const openCreate = () => { setForm(EMPTY); setModal('create') }
@@ -51,7 +63,9 @@ export default function ClientsTab() {
         </button>
       </div>
 
-      {loading ? <p className="text-sm text-gray-400">{t('common.loading')}</p> : (
+      {loading ? <p className="text-sm text-gray-400">{t('common.loading')}</p> : loadError ? (
+        <p className="text-sm text-red-500">Failed to load clients. Check your connection and refresh.</p>
+      ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">

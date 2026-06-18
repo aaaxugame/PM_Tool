@@ -43,16 +43,29 @@ export default function UsersTab() {
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [clients, setClients] = useState<Client[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [modal, setModal] = useState<null | 'create' | User>(null)
   const [form, setForm] = useState<FormState>(EMPTY)
   const [saving, setSaving] = useState(false)
 
-  const load = () =>
-    Promise.all([
-      usersApi.list().then(r => setUsers(r.data)),
-      vendorsApi.list().then(r => setVendors(r.data)),
-      clientsApi.list().then(r => setClients(r.data)),
-    ]).finally(() => setLoading(false))
+  const load = async () => {
+    setLoading(true)
+    setLoadError(false)
+    try {
+      const [usersRes, vendorsRes, clientsRes] = await Promise.all([
+        usersApi.list(),
+        vendorsApi.list(),
+        clientsApi.list(),
+      ])
+      setUsers(usersRes.data)
+      setVendors(vendorsRes.data)
+      setClients(clientsRes.data)
+    } catch {
+      setLoadError(true)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   useEffect(() => { load() }, [])
 
@@ -122,7 +135,9 @@ export default function UsersTab() {
         </button>
       </div>
 
-      {loading ? <p className="text-sm text-gray-400">{t('common.loading')}</p> : (
+      {loading ? <p className="text-sm text-gray-400">{t('common.loading')}</p> : loadError ? (
+        <p className="text-sm text-red-500">Failed to load users. Check your connection and refresh.</p>
+      ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">

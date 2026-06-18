@@ -10,11 +10,23 @@ export default function VendorsTab() {
   const { t } = useTranslation()
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState(false)
   const [modal, setModal] = useState<null | 'create' | Vendor>(null)
   const [form, setForm] = useState<Partial<Vendor>>(EMPTY)
   const [saving, setSaving] = useState(false)
 
-  const load = () => vendorsApi.list().then(r => setVendors(r.data)).finally(() => setLoading(false))
+  const load = async () => {
+    setLoading(true)
+    setLoadError(false)
+    try {
+      const res = await vendorsApi.list()
+      setVendors(res.data)
+    } catch {
+      setLoadError(true)
+    } finally {
+      setLoading(false)
+    }
+  }
   useEffect(() => { load() }, [])
 
   const openCreate = () => { setForm(EMPTY); setModal('create') }
@@ -51,7 +63,9 @@ export default function VendorsTab() {
         </button>
       </div>
 
-      {loading ? <p className="text-sm text-gray-400">{t('common.loading')}</p> : (
+      {loading ? <p className="text-sm text-gray-400">{t('common.loading')}</p> : loadError ? (
+        <p className="text-sm text-red-500">Failed to load vendors. Check your connection and refresh.</p>
+      ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-gray-200">
