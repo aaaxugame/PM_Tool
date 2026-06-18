@@ -47,7 +47,9 @@ export class UsersAdminService {
     await this.findOne(id);
     const { roles, password, ...data } = dto;
     const passwordHash = password ? await bcrypt.hash(password, 10) : undefined;
-    const updateData = passwordHash ? { ...data, passwordHash } : data;
+    const updateData = passwordHash
+      ? { ...data, passwordHash, authProvider: 'LOCAL' as const }
+      : data;
     await this.prisma.user.update({ where: { id }, data: updateData });
     if (roles) await this.assignRoles(id, roles);
     return this.findOne(id);

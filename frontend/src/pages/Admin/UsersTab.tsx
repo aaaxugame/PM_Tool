@@ -98,6 +98,10 @@ export default function UsersTab() {
     }))
 
   const handleSave = async () => {
+    if (modal === 'create' && !form.password) {
+      alert('Password is required when creating a new user.')
+      return
+    }
     setSaving(true)
     try {
       const payload: any = {
@@ -220,6 +224,7 @@ export default function UsersTab() {
                 {isEditing ? t('admin.passwordKeep') : `${t('auth.password')} *`}
               </label>
               <input type="password" value={form.password} onChange={e => set('password', e.target.value)}
+                autoComplete="new-password"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
             </div>
 
@@ -294,6 +299,7 @@ export default function UsersTab() {
             <button onClick={handleSave}
               disabled={
                 saving || !form.name || !form.email ||
+                (!isEditing && !form.password) ||
                 (form.userType === 'vendor' && !form.vendorId) ||
                 (form.userType === 'client' && !form.clientId)
               }
