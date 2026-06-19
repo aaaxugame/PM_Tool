@@ -67,7 +67,9 @@
     "noProjects": "No projects yet",
     "noInvoices": "No invoices yet",
     "tasks": "tasks",
-    "welcomeBack": "Welcome back"
+    "welcomeBack": "Welcome back",
+    "noRoleTitle": "No Role Assigned",
+    "noRoleMessage": "Your account does not have a role assigned yet. Please contact your administrator to get access."
   },
   "profile": {
     "title": "My Profile",

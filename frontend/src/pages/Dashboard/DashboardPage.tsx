@@ -218,6 +218,23 @@ export default function DashboardPage() {
     )
   }
 
-  // Fallback: TEAM_MEMBER and others
+  // No role assigned
+  if (roles.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-semibold text-gray-800">{t('dashboard.title')}</h1>
+          <p className="text-sm text-gray-500 mt-1">{t('dashboard.welcomeBack')}, {user.name}</p>
+        </div>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 text-center">
+          <div className="text-3xl mb-3">⚠️</div>
+          <h2 className="text-lg font-semibold text-yellow-800 mb-2">{t('dashboard.noRoleTitle')}</h2>
+          <p className="text-sm text-yellow-700">{t('dashboard.noRoleMessage')}</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Fallback: TEAM_MEMBER
   return <GenericDashboard />
 }

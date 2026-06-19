@@ -67,7 +67,9 @@
     "noProjects": "暂无项目",
     "noInvoices": "暂无发票",
     "tasks": "个任务",
-    "welcomeBack": "欢迎回来"
+    "welcomeBack": "欢迎回来",
+    "noRoleTitle": "未分配角色",
+    "noRoleMessage": "您的账户尚未分配角色，请联系管理员以获取访问权限。"
   },
   "profile": {
     "title": "我的个人资料",

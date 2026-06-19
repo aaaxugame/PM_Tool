@@ -67,7 +67,9 @@
     "noProjects": "尚無專案",
     "noInvoices": "尚無發票",
     "tasks": "個任務",
-    "welcomeBack": "歡迎回來"
+    "welcomeBack": "歡迎回來",
+    "noRoleTitle": "未分配角色",
+    "noRoleMessage": "您的帳戶尚未分配角色，請聯絡管理員以取得存取權限。"
   },
   "profile": {
     "title": "我的個人檔案",

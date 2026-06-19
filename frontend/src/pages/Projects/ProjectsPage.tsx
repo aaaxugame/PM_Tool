@@ -752,8 +752,8 @@ function ProjectTable({
               <td className="px-4 py-3 text-gray-500 text-center">{p._count.tasks}</td>
               {showActions && (
                 <td className="px-4 py-3 text-right space-x-2">
-                  <button onClick={() => onEdit?.(p)} className="text-blue-600 hover:underline text-xs">{t('common.edit')}</button>
-                  <button onClick={() => onDelete?.(p.id)} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>
+                  {onEdit && <button onClick={() => onEdit(p)} className="text-blue-600 hover:underline text-xs">{t('common.edit')}</button>}
+                  {onDelete && <button onClick={() => onDelete(p.id)} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>}
                 </td>
               )}
             </tr>
@@ -848,8 +848,8 @@ function AllProjectsTab({
   onDelete,
   refreshKey,
 }: {
-  onEdit: (p: Project) => void
-  onDelete: (id: number) => void
+  onEdit?: (p: Project) => void
+  onDelete?: (id: number) => void
   refreshKey: number
 }) {
   const { t } = useTranslation()
@@ -937,7 +937,7 @@ function AllProjectsTab({
         loading={loading}
         onEdit={onEdit}
         onDelete={onDelete}
-        showActions
+        showActions={!!(onEdit || onDelete)}
       />
     </div>
   )
@@ -1054,7 +1054,7 @@ export default function ProjectsPage() {
       </div>
 
       {isAllProjectsTab ? (
-        <AllProjectsTab onEdit={openEdit} onDelete={handleDelete} refreshKey={allProjectsRefreshKey} />
+        <AllProjectsTab onEdit={canManage ? openEdit : undefined} onDelete={canManage ? handleDelete : undefined} refreshKey={allProjectsRefreshKey} />
       ) : isVendorRequestsTab ? (
         <VendorRequestsTab />
       ) : (
