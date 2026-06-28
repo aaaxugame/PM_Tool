@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PM Tool – User Manual</title>
+<style>
+  /* ── Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #1a1a2e;
+    background: #fff;
+    padding: 0;
+  }
+
+  /* ── Cover page ── */
+  .cover {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    min-height: 800px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #3b82f6 100%);
+    color: #fff;
+    text-align: center;
+    page-break-after: always;
+    padding: 60px 40px;
+  }
+  .cover-logo {
+    width: 72px;
+    height: 72px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 28px;
+    font-size: 36px;
+  }
+  .cover h1 {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 10px;
+  }
+  .cover h2 {
+    font-size: 20px;
+    font-weight: 400;
+    opacity: 0.85;
+    margin-bottom: 40px;
+  }
+  .cover-meta {
+    font-size: 13px;
+    opacity: 0.7;
+    margin-top: auto;
+  }
+  .cover-divider {
+    width: 60px;
+    height: 3px;
+    background: rgba(255,255,255,0.5);
+    border-radius: 2px;
+    margin: 0 auto 40px;
+  }
+
+  /* ── TOC page ── */
+  .toc-page {
+    padding: 60px 80px;
+    page-break-after: always;
+  }
+  .toc-page h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e3a5f;
+    border-bottom: 3px solid #2563eb;
+    padding-bottom: 10px;
+    margin-bottom: 28px;
+  }
+  .toc-list { list-style: none; }
+  .toc-list li {
+    display: flex;
+    align-items: baseline;
+    padding: 6px 0;
+    font-size: 13.5px;
+  }
+  .toc-list li::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px dotted #c7d2e0;
+    margin: 0 10px;
+    position: relative;
+    top: -2px;
+  }
+  .toc-list a {
+    color: #1e3a5f;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .toc-list a:hover { color: #2563eb; }
+  .toc-page-num { color: #6b7280; font-size: 12px; }
+
+  /* ── Content pages ── */
+  .content {
+    padding: 56px 80px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  /* ── Section heading ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 0 0 28px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid #e5eaf3;
+    page-break-after: avoid;
+  }
+  .section-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+  h1.section-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e3a5f;
+  }
+
+  /* ── Headings inside sections ── */
+  h2.sub {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e3a5f;
+    margin: 28px 0 10px;
+    page-break-after: avoid;
+  }
+  h3.sub {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #374151;
+    margin: 18px 0 8px;
+    page-break-after: avoid;
+  }
+
+  /* ── Body text ── */
+  p { margin: 0 0 10px; }
+
+  /* ── Tables ── */
+  .table-wrap { overflow-x: auto; margin: 12px 0 18px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  thead tr { background: #1e3a5f; color: #fff; }
+  thead th {
+    padding: 9px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.3px;
+  }
+  tbody tr:nth-child(even) { background: #f0f4fb; }
+  tbody tr:hover { background: #dbeafe; }
+  tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e5eaf3;
+    vertical-align: top;
+  }
+  td strong { color: #1e3a5f; }
+
+  /* ── Code / flow ── */
+  code {
+    font-family: "Cascadia Code", "Fira Code", "Courier New", monospace;
+    font-size: 12px;
+    background: #f1f5f9;
+    color: #1e3a5f;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-size: 12px;
+    font-family: "Cascadia Code", "Fira Code", monospace;
+    margin: 12px 0 18px;
+    overflow-x: auto;
+    page-break-inside: avoid;
+  }
+
+  /* ── Blockquote / callout ── */
+  blockquote {
+    background: #eff6ff;
+    border-left: 4px solid #2563eb;
+    border-radius: 0 6px 6px 0;
+    padding: 12px 16px;
+    margin: 12px 0 18px;
+    color: #1e3a5f;
+    font-style: italic;
+    font-size: 12.5px;
+  }
+
+  /* ── Lists ── */
+  ul, ol {
+    padding-left: 22px;
+    margin: 8px 0 14px;
+  }
+  li { margin-bottom: 4px; }
+  li strong { color: #1e3a5f; }
+
+  /* ── Role badges ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 1px 2px;
+  }
+  .badge-blue   { background: #dbeafe; color: #1d4ed8; }
+  .badge-green  { background: #dcfce7; color: #15803d; }
+  .badge-purple { background: #ede9fe; color: #7c3aed; }
+  .badge-orange { background: #ffedd5; color: #c2410c; }
+  .badge-gray   { background: #f1f5f9; color: #475569; }
+
+  /* ── Info callout box ── */
+  .info-box {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 14px 0;
+    font-size: 12.5px;
+    color: #1e40af;
+  }
+  .info-box strong { display: block; margin-bottom: 4px; }
+
+  /* ── Step list ── */
+  .step-list { list-style: none; padding-left: 0; counter-reset: steps; }
+  .step-list li {
+    counter-increment: steps;
+    padding: 8px 0 8px 44px;
+    position: relative;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .step-list li::before {
+    content: counter(steps);
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 28px;
+    height: 28px;
+    background: #2563eb;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* ── Section break ── */
+  .section-break { page-break-before: always; padding-top: 56px; }
+
+  /* ── Print ── */
+  @media print {
+    body { font-size: 12px; }
+    .cover { page-break-after: always; }
+    .toc-page { page-break-after: always; }
+    .section-break { page-break-before: always; }
+    .section-header { page-break-after: avoid; }
+    h2.sub, h3.sub { page-break-after: avoid; }
+    pre, table, blockquote { page-break-inside: avoid; }
+    a { color: inherit; text-decoration: none; }
+    @page {
+      margin: 18mm 18mm 18mm 18mm;
+    }
+    @page :first { margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     COVER
+══════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-logo">📋</div>
+  <h1>PM Tool</h1>
+  <h2>User Manual</h2>
+  <div class="cover-divider"></div>
+  <p style="opacity:.8;font-size:15px;margin-bottom:8px;">Complete guide for all roles &amp; features</p>
+  <p style="opacity:.6;font-size:13px;">Version 1.0 &nbsp;·&nbsp; June 2026</p>
+  <div class="cover-meta" style="margin-top:60px;">
+    <p>Supports EN / 简 / 繁 &nbsp;·&nbsp; 13 sections</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TABLE OF CONTENTS
+══════════════════════════════════════ -->
+<div class="toc-page">
+  <h2>Table of Contents</h2>
+  <ul class="toc-list">
+    <li><a href="#s1">1. Getting Started</a></li>
+    <li><a href="#s2">2. User Roles &amp; Permissions</a></li>
+    <li><a href="#s3">3. Dashboard</a></li>
+    <li><a href="#s4">4. Projects</a></li>
+    <li><a href="#s5">5. Tasks</a></li>
+    <li><a href="#s6">6. Time Tracking</a></li>
+    <li><a href="#s7">7. Timesheets</a></li>
+    <li><a href="#s8">8. Invoices</a></li>
+    <li><a href="#s9">9. Financials</a></li>
+    <li><a href="#s10">10. Reports</a></li>
+    <li><a href="#s11">11. Admin Panel</a></li>
+    <li><a href="#s12">12. Profile</a></li>
+    <li><a href="#s13">13. Language Support</a></li>
+  </ul>
+</div>
+
+<!-- ══════════════════════════════════════
+     CONTENT
+══════════════════════════════════════ -->
+<div class="content">
+
+<!-- § 1 -->
+<div id="s1">
+  <div class="section-header">
+    <div class="section-number">1</div>
+    <h1 class="section-title">Getting Started</h1>
+  </div>
+
+  <h2 class="sub">Logging In</h2>
+  <p>Navigate to the application URL and sign in using one of two methods:</p>
+  <ul>
+    <li><strong>Email &amp; Password</strong> — Enter your email and password, then click <strong>Login</strong>.</li>
+    <li><strong>Google OAuth</strong> — Click <strong>Sign in with Google</strong> to authenticate with your Google account.</li>
+  </ul>
+  <p>If your account has no role assigned, you will see a warning banner on the dashboard:</p>
+  <blockquote>"Your account does not have a role assigned yet. Please contact your administrator to get access."</blockquote>
+
+  <h2 class="sub">Navigation</h2>
+  <p>The sidebar on the left provides access to all features. The items visible depend on your role:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Section</th><th>Menu Item</th><th>Visible To</th></tr></thead>
+      <tbody>
+        <tr><td>—</td><td>Dashboard</td><td>Everyone</td></tr>
+        <tr><td>Manage</td><td>Projects</td><td>Everyone</td></tr>
+        <tr><td>Manage</td><td>Tasks</td><td>Internal + Vendor</td></tr>
+        <tr><td>Time &amp; Billing</td><td>Time Tracking</td><td>Internal + Vendor</td></tr>
+        <tr><td>Time &amp; Billing</td><td>Timesheets</td><td>Internal + Vendor</td></tr>
+        <tr><td>Time &amp; Billing</td><td>Invoices</td><td>Everyone</td></tr>
+        <tr><td>Time &amp; Billing</td><td>Financials</td><td>Admin, Super Admin, AM, PM</td></tr>
+        <tr><td>Time &amp; Billing</td><td>Reports</td><td>Admin, Super Admin, AM, PM</td></tr>
+        <tr><td>Admin</td><td>Admin</td><td>Admin, Super Admin</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Your user profile is displayed at the bottom of the sidebar, showing your name, job title, email, and user type (Internal, Vendor, or Client). Click <strong>Edit profile</strong> to go to your profile page.</p>
+</div>
+
+<!-- § 2 -->
+<div id="s2" class="section-break">
+  <div class="section-header">
+    <div class="section-number">2</div>
+    <h1 class="section-title">User Roles &amp; Permissions</h1>
+  </div>
+  <p>PM Tool has three user types and eight roles:</p>
+
+  <h2 class="sub">Internal Users</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Role</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Super Admin</strong></td><td>Full system access including admin panel and all management features</td></tr>
+        <tr><td><strong>Admin</strong></td><td>Full system access including admin panel and all management features</td></tr>
+        <tr><td><strong>Account Manager (AM)</strong></td><td>Manages client relationships, projects, invoices, financials, and reports</td></tr>
+        <tr><td><strong>Project Manager (PM)</strong></td><td>Manages projects, tasks, timesheets, invoices, financials, and reports</td></tr>
+        <tr><td><strong>Team Member</strong></td><td>Works on assigned tasks, logs time, submits timesheets</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sub">Vendor Users</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Role</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Contractor</strong></td><td>Logs time, submits timesheets, views assigned projects</td></tr>
+        <tr><td><strong>Vendor Contact</strong></td><td>Manages vendor relationship, submits project requests and vendor invoices</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sub">Client Users</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Role</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Client</strong></td><td>Views own projects, reviews and approves invoices</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sub">Permission Summary</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Action</th><th>Super Admin</th><th>Admin</th><th>AM</th><th>PM</th>
+          <th>Team Member</th><th>Contractor</th><th>Vendor Contact</th><th>Client</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Create/Edit/Delete Projects</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>Request only</td><td>—</td></tr>
+        <tr><td>Create/Edit Tasks</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>Log Time</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td></tr>
+        <tr><td>Submit Timesheets</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td></tr>
+        <tr><td>Approve/Reject Timesheets</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>Create Client Invoices</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>Create Vendor Invoices</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✓</td><td>—</td></tr>
+        <tr><td>Approve Invoices</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
+        <tr><td>View Financials</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>View Reports</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>Admin Panel</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- § 3 -->
+<div id="s3" class="section-break">
+  <div class="section-header">
+    <div class="section-number">3</div>
+    <h1 class="section-title">Dashboard</h1>
+  </div>
+  <p>Each role sees a customized dashboard after login.</p>
+
+  <h2 class="sub">Account Manager / Admin / Super Admin Dashboard</h2>
+  <ul>
+    <li><strong>Stat Cards:</strong> Total Projects, Active Projects, Total Clients, Total Contract Value</li>
+    <li><strong>Revenue Pipeline:</strong> Total Billed, Collected, Outstanding amounts with badges for pending quotes and approvals</li>
+    <li><strong>Portfolio by Client:</strong> Table showing each client's project count, active projects, and contract value</li>
+    <li><strong>Invoices Requiring Action:</strong> List of invoices that need review with status badges</li>
+    <li><strong>Pending Vendor Quotes:</strong> Quotes awaiting approval with Approve/Reject actions</li>
+    <li><strong>Projects by Status:</strong> Breakdown of projects by their current status</li>
+  </ul>
+
+  <h2 class="sub">Project Manager Dashboard</h2>
+  <ul>
+    <li><strong>Stat Cards:</strong> My Projects, Active, Tasks Due This Week, Pending Timesheets</li>
+    <li><strong>Pending Vendor Project Requests:</strong> Vendor-submitted project requests with Approve/Reject buttons</li>
+    <li><strong>My Projects:</strong> List of assigned projects with health indicators (On Track, At Risk, Delayed)</li>
+    <li><strong>Task Distribution:</strong> Breakdown of tasks by status (To Do, In Progress, Review, Done)</li>
+    <li><strong>Pending Quotes:</strong> Vendor quotes awaiting review</li>
+  </ul>
+
+  <h2 class="sub">Vendor Dashboard</h2>
+  <ul>
+    <li><strong>Vendor Info Card:</strong> Vendor name, contact details, project count</li>
+    <li><strong>Metric Cards:</strong> Total Contract Value, Invoiced, Paid, Outstanding</li>
+    <li><strong>Active Projects:</strong> List of current projects with status and health indicators</li>
+    <li><strong>Quotes:</strong> Manage vendor quotes (create, submit, delete) with status tracking (Pending, Submitted, Approved, Rejected)</li>
+    <li><strong>Recent Invoices:</strong> Latest vendor invoices with status</li>
+  </ul>
+
+  <h2 class="sub">Client Dashboard</h2>
+  <ul>
+    <li><strong>Billing Summary:</strong> Contracted, Invoiced, Paid, Outstanding amounts</li>
+    <li><strong>My Projects:</strong> Grid of project cards showing status, approval status, task progress bar, PM/AM assignments, and due dates</li>
+    <li><strong>Recent Invoices:</strong> Table of latest invoices with status badges</li>
+    <li><strong>Project Timeline:</strong> Overview of active project milestones</li>
+  </ul>
+
+  <h2 class="sub">Team Member / Generic Dashboard</h2>
+  <ul>
+    <li><strong>Stat Cards:</strong> Active Projects, Open Tasks, Pending Timesheets, Hours This Week, Outstanding Invoices</li>
+    <li><strong>Recent Projects:</strong> Quick links to projects with task counts</li>
+    <li><strong>Recent Invoices:</strong> Table of recent invoices with status</li>
+  </ul>
+</div>
+
+<!-- § 4 -->
+<div id="s4" class="section-break">
+  <div class="section-header">
+    <div class="section-number">4</div>
+    <h1 class="section-title">Projects</h1>
+  </div>
+  <p>Access via <strong>Projects</strong> in the sidebar.</p>
+
+  <h2 class="sub">Tabs (vary by role)</h2>
+  <h3 class="sub">Internal Users — 4 tabs</h3>
+  <ol>
+    <li><strong>My Projects</strong> — Projects you are assigned to (as PM, AM, or team member)</li>
+    <li><strong>All Projects</strong> — All projects in the system with filters for PM, AM, Client, and Vendor</li>
+    <li><strong>Vendor Requests</strong> — Project requests submitted by vendors awaiting approval</li>
+    <li><strong>Archived Projects</strong> — Projects with ARCHIVED status</li>
+  </ol>
+  <h3 class="sub">Vendor Users — 3 tabs</h3>
+  <ol>
+    <li><strong>Current Projects</strong> — Active projects assigned to your vendor</li>
+    <li><strong>My Requests</strong> — Project requests you have submitted with approval status</li>
+    <li><strong>Archived Projects</strong> — Archived vendor projects</li>
+  </ol>
+  <h3 class="sub">Client Users — 1 tab</h3>
+  <ol>
+    <li><strong>My Projects</strong> — Projects associated with your organization</li>
+  </ol>
+
+  <h2 class="sub">Creating a Project</h2>
+  <p>Click <strong>+ Create</strong> (top right). Fill in the project form:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Field</th><th>Required</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Name</td><td>Yes</td><td>Project name</td></tr>
+        <tr><td>Category</td><td>No</td><td>Project category</td></tr>
+        <tr><td>Description</td><td>No</td><td>Project details</td></tr>
+        <tr><td>Status</td><td>No</td><td>DRAFT, ACTIVE, ON_HOLD, COMPLETED, CANCELLED, ARCHIVED</td></tr>
+        <tr><td>Project Type</td><td>No</td><td>INTERNAL or other types</td></tr>
+        <tr><td>Priority</td><td>No</td><td>LOW, MEDIUM, HIGH, URGENT</td></tr>
+        <tr><td>Billing Method</td><td>No</td><td>Time &amp; Materials, Fixed, Milestone, Mixed</td></tr>
+        <tr><td>Risk Level</td><td>No</td><td>Project risk assessment</td></tr>
+        <tr><td>Client</td><td>No</td><td>Assign a client organization</td></tr>
+        <tr><td>Vendor</td><td>No</td><td>Assign a vendor organization</td></tr>
+        <tr><td>Project Manager</td><td>No</td><td>Assign a PM</td></tr>
+        <tr><td>Account Manager</td><td>No</td><td>Assign an AM</td></tr>
+        <tr><td>Team Members</td><td>No</td><td>Multi-select team members</td></tr>
+        <tr><td>Start Date</td><td>No</td><td>Project start date</td></tr>
+        <tr><td>End Date</td><td>No</td><td>Project end date</td></tr>
+        <tr><td>Proposed Cost</td><td>No</td><td>Estimated project cost</td></tr>
+        <tr><td>Estimated Hours</td><td>No</td><td>Estimated total hours</td></tr>
+        <tr><td>Proposed Workers</td><td>No</td><td>Number of workers needed</td></tr>
+        <tr><td>Required Skill Set</td><td>No</td><td>Skills required</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>Use <strong>Save as Draft</strong> to save without making it active, or <strong>Save</strong> to create the project.</p>
+
+  <h2 class="sub">Vendor Project Requests</h2>
+  <p>Vendors can submit project requests by clicking <strong>+ New Request</strong>. The request form includes: Name, Category, Description, Start/End Date, Proposed Workers, Required Skill Set, Billing Method, Estimated Cost, and Estimated Hours.</p>
+  <p>Requests can be saved as draft or submitted. Once submitted, PM/AM/Admin users can <strong>Approve</strong> or <strong>Reject</strong> the request from the Vendor Requests tab or their dashboard.</p>
+
+  <h2 class="sub">Project Detail Page</h2>
+  <p>Click any project name to open the detail page, which has four tabs:</p>
+  <ol>
+    <li><strong>Work</strong> — Manage milestones and tasks (create, edit, delete milestones and tasks; quick-cycle task status by clicking the status badge; view team members panel)</li>
+    <li><strong>Quotes</strong> — Vendor quotes for the project (view, create, and manage; statuses: PENDING, SUBMITTED, APPROVED, REJECTED)</li>
+    <li><strong>Budget</strong> — Budget tracking; create and manage budget line items</li>
+    <li><strong>Documents</strong> — Upload and manage project documents</li>
+  </ol>
+</div>
+
+<!-- § 5 -->
+<div id="s5" class="section-break">
+  <div class="section-header">
+    <div class="section-number">5</div>
+    <h1 class="section-title">Tasks</h1>
+  </div>
+  <p>Access via <strong>Tasks</strong> in the sidebar (Internal + Vendor users only).</p>
+
+  <h2 class="sub">Viewing Tasks</h2>
+  <p>Tasks are displayed in a table with status filter tabs: <strong>All</strong>, <strong>To Do</strong>, <strong>In Progress</strong>, <strong>Review</strong>, <strong>Done</strong>. Use the <strong>Project</strong> dropdown to filter by project.</p>
+
+  <h2 class="sub">Creating a Task</h2>
+  <p>Click <strong>+ Create</strong> and fill in:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Field</th><th>Required</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Name</td><td>Yes</td><td>Task name</td></tr>
+        <tr><td>Description</td><td>No</td><td>Task details</td></tr>
+        <tr><td>Status</td><td>No</td><td>TODO, IN_PROGRESS, REVIEW, DONE</td></tr>
+        <tr><td>Priority</td><td>No</td><td>LOW, MEDIUM, HIGH, URGENT</td></tr>
+        <tr><td>Project</td><td>Yes</td><td>Which project this task belongs to</td></tr>
+        <tr><td>Milestone</td><td>No</td><td>Associate with a project milestone</td></tr>
+        <tr><td>Assignee</td><td>No</td><td>User assigned to the task</td></tr>
+        <tr><td>Due Date</td><td>No</td><td>Task deadline</td></tr>
+        <tr><td>Estimated Hours</td><td>No</td><td>Time estimate</td></tr>
+        <tr><td>Is Billable</td><td>No</td><td>Toggle whether the task is billable</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sub">Quick Status Change</h2>
+  <p>Click the status badge on any task to cycle through: <strong>TODO → IN_PROGRESS → REVIEW → DONE</strong>.</p>
+</div>
+
+<!-- § 6 -->
+<div id="s6" class="section-break">
+  <div class="section-header">
+    <div class="section-number">6</div>
+    <h1 class="section-title">Time Tracking</h1>
+  </div>
+  <p>Access via <strong>Time Tracking</strong> in the sidebar (Internal + Vendor users only).</p>
+
+  <h2 class="sub">Logging Time</h2>
+  <p>The Time Log shows all your time entries. Click <strong>+ New Entry</strong> to create one:</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Field</th><th>Required</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Date</td><td>Yes</td><td>Date of work</td></tr>
+        <tr><td>Project</td><td>Yes</td><td>Project worked on</td></tr>
+        <tr><td>Task</td><td>No</td><td>Specific task</td></tr>
+        <tr><td>Description</td><td>No</td><td>What you worked on</td></tr>
+        <tr><td>Start Time</td><td>Yes</td><td>When you started</td></tr>
+        <tr><td>End Time</td><td>Yes</td><td>When you stopped</td></tr>
+        <tr><td>Duration</td><td>Auto</td><td>Calculated from start/end times</td></tr>
+        <tr><td>Billable</td><td>No</td><td>Whether this time is billable</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sub">Live Timer</h2>
+  <p>Use the <strong>Start Timer</strong> button to track time in real-time. Click <strong>Stop</strong> when done — the start/end times will auto-populate the entry form.</p>
+
+  <h2 class="sub">Filters</h2>
+  <p>Filter your time entries by <strong>Project</strong> or <strong>Date range</strong> (start and end dates).</p>
+
+  <h2 class="sub">Locked Entries</h2>
+  <p>Time entries that are part of a submitted timesheet are locked and cannot be edited or deleted. They display a lock icon.</p>
+</div>
+
+<!-- § 7 -->
+<div id="s7" class="section-break">
+  <div class="section-header">
+    <div class="section-number">7</div>
+    <h1 class="section-title">Timesheets</h1>
+  </div>
+  <p>Access via <strong>Timesheets</strong> in the sidebar (Internal + Vendor users only).</p>
+
+  <h2 class="sub">My Timesheets</h2>
+  <p>Create timesheets to bundle and submit your time entries for approval.</p>
+  <ol class="step-list">
+    <li>Click <strong>+ New Timesheet</strong></li>
+    <li>Select the <strong>period start</strong> and <strong>period end</strong> dates</li>
+    <li>The system automatically includes matching time entries</li>
+    <li><strong>Submit</strong> the timesheet for approval, or save as draft</li>
+  </ol>
+  <h3 class="sub">Timesheet Statuses</h3>
+  <ul>
+    <li><strong>DRAFT</strong> — Not yet submitted; can be edited or deleted</li>
+    <li><strong>SUBMITTED</strong> — Awaiting review; entries are locked</li>
+    <li><strong>APPROVED</strong> — Approved by a reviewer</li>
+    <li><strong>REJECTED</strong> — Rejected with a reason; review the feedback and resubmit</li>
+  </ul>
+  <p>Click any timesheet to expand and see all linked time entries with hours.</p>
+
+  <h2 class="sub">Reviewing Timesheets (PM, AM, Admin, Super Admin)</h2>
+  <p>The <strong>Pending Review</strong> section shows all submitted timesheets from team members.</p>
+  <ol class="step-list">
+    <li>Click a timesheet to expand and review the time entries</li>
+    <li>Click <strong>Approve</strong> to approve the timesheet</li>
+    <li>Click <strong>Reject</strong> and provide a reason to send it back</li>
+  </ol>
+  <p>The <strong>Approved Timesheets</strong> section shows previously approved timesheets with total hours, billable hours, and who approved them.</p>
+</div>
+
+<!-- § 8 -->
+<div id="s8" class="section-break">
+  <div class="section-header">
+    <div class="section-number">8</div>
+    <h1 class="section-title">Invoices</h1>
+  </div>
+  <p>Access via <strong>Invoices</strong> in the sidebar (Everyone).</p>
+
+  <h2 class="sub">Tabs</h2>
+  <ul>
+    <li><strong>Client Invoices</strong> — Invoices sent to clients (visible to Internal users and Clients)</li>
+    <li><strong>Vendor Invoices</strong> — Invoices from vendors (visible to Internal users and Vendors)</li>
+  </ul>
+  <p>Use the <strong>Status</strong> filter to filter invoices by their current status.</p>
+
+  <h2 class="sub">Client Invoices</h2>
+  <h3 class="sub">Creating a Client Invoice (PM, AM, Admin)</h3>
+  <ol class="step-list">
+    <li>Click <strong>+ Create Invoice</strong></li>
+    <li>Select the <strong>Project</strong> and <strong>Client</strong></li>
+    <li>Add line items with Description, Quantity, Unit Price</li>
+    <li>Set tax rate and currency (auto-populated from client settings)</li>
+    <li>Save as Draft</li>
+  </ol>
+  <h3 class="sub">Invoice Lifecycle</h3>
+  <pre>DRAFT ──► SENT ──► APPROVED ──► PAID
+                            └──► OVERDUE (if past due date)</pre>
+  <ul>
+    <li><strong>DRAFT</strong> — Can be edited and deleted</li>
+    <li><strong>SENT</strong> — Sent to the client for review</li>
+    <li><strong>APPROVED</strong> — Client or AM has approved the invoice</li>
+    <li><strong>PAID</strong> — Payment has been received</li>
+    <li><strong>OVERDUE</strong> — Past the due date without payment</li>
+  </ul>
+
+  <h2 class="sub">Vendor Invoices</h2>
+  <h3 class="sub">Creating a Vendor Invoice (Vendor Contact)</h3>
+  <ol class="step-list">
+    <li>Click <strong>+ Create Invoice</strong></li>
+    <li>Select from approved quotes (auto-populates details)</li>
+    <li>Add line items</li>
+    <li>Save as Draft or Submit</li>
+  </ol>
+  <h3 class="sub">Vendor Invoice Lifecycle</h3>
+  <pre>DRAFT ──► SUBMITTED ──► APPROVED ──► PAID
+                    └──► REJECTED
+                    └──► REVISION_REQUESTED ──► (new version created)</pre>
+  <ul>
+    <li><strong>SUBMITTED</strong> — Awaiting review by PM/AM</li>
+    <li><strong>APPROVED</strong> — PM/AM approved the invoice</li>
+    <li><strong>REJECTED</strong> — AM rejected the invoice (with notes)</li>
+    <li><strong>REVISION_REQUESTED</strong> — PM/AM requested changes; a new version is created for the vendor to edit and resubmit</li>
+  </ul>
+  <p>A <strong>review-queue banner</strong> alerts PM/AM users when there are pending vendor invoices with count and total amount.</p>
+
+  <h2 class="sub">Invoice Detail Page</h2>
+  <p>Click any invoice to view its full details: invoice header with status, dates, and amounts; line items table; payment history; and action buttons (Submit, Approve, Reject, Request Revision) based on your role and the invoice status.</p>
+
+  <h2 class="sub">Recording Payments</h2>
+  <p>For approved invoices, authorized users can record payments:</p>
+  <ol class="step-list">
+    <li>Open the invoice detail page</li>
+    <li>Click <strong>Record Payment</strong></li>
+    <li>Enter the payment amount and date</li>
+    <li>The invoice status updates to PAID when fully paid</li>
+  </ol>
+</div>
+
+<!-- § 9 -->
+<div id="s9" class="section-break">
+  <div class="section-header">
+    <div class="section-number">9</div>
+    <h1 class="section-title">Financials</h1>
+  </div>
+  <p>Access via <strong>Financials</strong> in the sidebar (Admin, Super Admin, AM, PM only).</p>
+
+  <h2 class="sub">Summary Cards</h2>
+  <p>Six cards provide a financial overview:</p>
+  <ul>
+    <li><strong>Draft</strong> — Total value of draft invoices (pipeline)</li>
+    <li><strong>Total Invoiced</strong> — All invoices sent</li>
+    <li><strong>Pending Review</strong> — Invoices awaiting approval</li>
+    <li><strong>Approved</strong> — Approved invoice total</li>
+    <li><strong>Paid</strong> — Total payments received</li>
+    <li><strong>Outstanding</strong> — Unpaid balance</li>
+  </ul>
+
+  <h2 class="sub">Project Breakdown Table</h2>
+  <p>A detailed table shows financial data per project: project name and billing method, currency, invoice count, Draft / Invoiced / Pending / Approved / Paid / Outstanding amounts, a paid progress bar, and a totals footer row.</p>
+
+  <h2 class="sub">Filters</h2>
+  <ul>
+    <li><strong>Vendor</strong> — Filter by vendor organization</li>
+    <li><strong>Client</strong> — Filter by client organization</li>
+  </ul>
+</div>
+
+<!-- § 10 -->
+<div id="s10" class="section-break">
+  <div class="section-header">
+    <div class="section-number">10</div>
+    <h1 class="section-title">Reports</h1>
+  </div>
+  <p>Access via <strong>Reports</strong> in the sidebar (Admin, Super Admin, AM, PM only).</p>
+
+  <h2 class="sub">Time Report Tab</h2>
+  <ul>
+    <li><strong>Summary Cards:</strong> Total Hours, Project Count, Entry Count</li>
+    <li><strong>By-Project Breakdown:</strong> Hours per project with percentage share bars</li>
+    <li><strong>Entry Log Table:</strong> Detailed time entries (up to 50 rows)</li>
+    <li><strong>Filters:</strong> Project dropdown, Date range (start/end)</li>
+  </ul>
+
+  <h2 class="sub">Invoice Report Tab</h2>
+  <ul>
+    <li><strong>Summary Cards:</strong> Total Billed, Collected, Outstanding</li>
+    <li><strong>By-Status Breakdown:</strong> Invoice amounts grouped by status (Draft, Sent, Paid, Overdue)</li>
+    <li><strong>Invoice Table:</strong> Full list with collected and balance columns</li>
+    <li><strong>Filters:</strong> Client dropdown, Date range (start/end)</li>
+  </ul>
+</div>
+
+<!-- § 11 -->
+<div id="s11" class="section-break">
+  <div class="section-header">
+    <div class="section-number">11</div>
+    <h1 class="section-title">Admin Panel</h1>
+  </div>
+  <p>Access via <strong>Admin</strong> in the sidebar (Admin, Super Admin only). The Admin panel has three tabs:</p>
+
+  <h2 class="sub">Users Tab</h2>
+  <p>Manage all user accounts in the system.</p>
+  <h3 class="sub">Creating a User</h3>
+  <ol class="step-list">
+    <li>Click <strong>+ Create User</strong></li>
+    <li>Fill in: Name (required), Email (required), Password (required), Job Title</li>
+    <li>Select User Type: Internal, Vendor, or Client</li>
+    <li>If Vendor/Client: select the organization</li>
+    <li>Toggle role assignments (multiple roles can be assigned)</li>
+    <li>Set Active/Inactive status</li>
+  </ol>
+  <p><strong>Available Roles:</strong> Super Admin, Admin, Account Manager, Project Manager, Team Member, Contractor, Vendor Contact, Client</p>
+  <p><strong>User Table</strong> displays: Name &amp; Title, Email, Company badge (Internal/Vendor/Client), Role pills, Active status.</p>
+
+  <h2 class="sub">Clients Tab</h2>
+  <p>Manage client organizations.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Field</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Name</td><td>Required</td></tr>
+        <tr><td>Contact Email</td><td></td></tr>
+        <tr><td>Contact Phone</td><td></td></tr>
+        <tr><td>Address</td><td></td></tr>
+        <tr><td>Payment Terms</td><td>Default: "Net 30"</td></tr>
+        <tr><td>Currency</td><td>Dropdown</td></tr>
+        <tr><td>Active / Inactive</td><td>Status toggle</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sub">Vendors Tab</h2>
+  <p>Manage vendor organizations.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Field</th><th>Notes</th></tr></thead>
+      <tbody>
+        <tr><td>Name</td><td>Required</td></tr>
+        <tr><td>Contact Email</td><td></td></tr>
+        <tr><td>Phone</td><td></td></tr>
+        <tr><td>Address</td><td></td></tr>
+        <tr><td>Default Hourly Rate</td><td>Displayed as "$X/hr"</td></tr>
+        <tr><td>Currency</td><td></td></tr>
+        <tr><td>Active / Inactive</td><td>Status toggle</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- § 12 -->
+<div id="s12" class="section-break">
+  <div class="section-header">
+    <div class="section-number">12</div>
+    <h1 class="section-title">Profile</h1>
+  </div>
+  <p>Click <strong>Edit profile</strong> in the sidebar footer, or navigate to <strong>Profile</strong>.</p>
+
+  <h2 class="sub">Editable Fields</h2>
+  <ul>
+    <li><strong>Name</strong> — Your display name</li>
+    <li><strong>Email</strong> — Your email address (disabled for Google OAuth users)</li>
+    <li><strong>Job Title</strong> — Your job title</li>
+  </ul>
+
+  <h2 class="sub">Read-Only Information</h2>
+  <ul>
+    <li><strong>User Type</strong> badge (Internal, Vendor, or Client)</li>
+    <li><strong>Company Name</strong> (for Vendor/Client users)</li>
+    <li><strong>Auth Provider</strong> badge (Local or Google)</li>
+    <li><strong>Roles</strong> — Your assigned role badges</li>
+  </ul>
+
+  <h2 class="sub">Changing Password (Local accounts only)</h2>
+  <ol class="step-list">
+    <li>Enter your <strong>Current Password</strong></li>
+    <li>Enter your <strong>New Password</strong> (minimum 8 characters)</li>
+    <li><strong>Confirm</strong> the new password</li>
+    <li>Click <strong>Update Password</strong></li>
+  </ol>
+  <p>Google OAuth users cannot change their password and do not see this section.</p>
+</div>
+
+<!-- § 13 -->
+<div id="s13" class="section-break">
+  <div class="section-header">
+    <div class="section-number">13</div>
+    <h1 class="section-title">Language Support</h1>
+  </div>
+  <p>PM Tool supports three languages. Switch using the buttons in the top-right corner of the header — your selection is applied immediately across the entire application.</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Button</th><th>Language</th></tr></thead>
+      <tbody>
+        <tr><td><strong>EN</strong></td><td>English</td></tr>
+        <tr><td><strong>简</strong></td><td>Simplified Chinese (zh-CN)</td></tr>
+        <tr><td><strong>繁</strong></td><td>Traditional Chinese (zh-TW)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- /content -->
+</body>
+</html>
