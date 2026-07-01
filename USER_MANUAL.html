@@ -430,7 +430,8 @@
       </thead>
       <tbody>
         <tr><td>Create/Edit/Delete Projects</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>Request only</td><td>—</td></tr>
-        <tr><td>Create/Edit Tasks</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>Create/Edit/Delete Milestones</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>Create/Edit/Delete Tasks</td><td>Any project</td><td>Any project</td><td>Any project</td><td>Any project</td><td>Assigned projects only</td><td>Assigned projects only</td><td>Assigned projects only</td><td>—</td></tr>
         <tr><td>Log Time</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td></tr>
         <tr><td>Submit Timesheets</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td></tr>
         <tr><td>Approve/Reject Timesheets</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
@@ -561,7 +562,7 @@
   <h2 class="sub">Project Detail Page</h2>
   <p>Click any project name to open the detail page, which has four tabs:</p>
   <ol>
-    <li><strong>Work</strong> — Manage milestones and tasks (create, edit, delete milestones and tasks; quick-cycle task status by clicking the status badge; view team members panel)</li>
+    <li><strong>Work</strong> — Manage milestones and tasks. Create/edit/delete milestones is limited to Super Admin, Admin, AM, and PM. Create/edit/delete tasks (and quick-cycling task status by clicking the status badge) is available to managers on any project, and to Team Members, Contractors, and Vendor Contacts only on projects they're assigned to. Also view the team members panel.</li>
     <li><strong>Quotes</strong> — Vendor quotes for the project (view, create, and manage; statuses: PENDING, SUBMITTED, APPROVED, REJECTED)</li>
     <li><strong>Budget</strong> — Budget tracking; create and manage budget line items</li>
     <li><strong>Documents</strong> — Upload and manage project documents</li>
@@ -577,7 +578,7 @@
   <p>Access via <strong>Tasks</strong> in the sidebar (Internal + Vendor users only).</p>
 
   <h2 class="sub">Viewing Tasks</h2>
-  <p>Tasks are displayed in a table with status filter tabs: <strong>All</strong>, <strong>To Do</strong>, <strong>In Progress</strong>, <strong>Review</strong>, <strong>Done</strong>. Use the <strong>Project</strong> dropdown to filter by project.</p>
+  <p>Tasks can be viewed as a <strong>Table</strong> (with status filter tabs: <strong>All</strong>, <strong>To Do</strong>, <strong>In Progress</strong>, <strong>Review</strong>, <strong>Done</strong>) or as a <strong>Board</strong> (Kanban-style columns). Use the <strong>Project</strong> dropdown to filter by project. This view shows tasks across all projects regardless of assignment — browsing is unrestricted, but editing is scoped (see below).</p>
 
   <h2 class="sub">Creating a Task</h2>
   <p>Click <strong>+ Create</strong> and fill in:</p>
@@ -598,9 +599,10 @@
       </tbody>
     </table>
   </div>
+  <p><strong>Project and Assignee options are scoped to your access:</strong> Super Admin/Admin/AM/PM see every project and can assign to anyone connected to the selected project. Team Member, Contractor, and Vendor Contact only see projects they're assigned to, and can only assign to people connected to that same project.</p>
 
   <h2 class="sub">Quick Status Change</h2>
-  <p>Click the status badge on any task to cycle through: <strong>TODO → IN_PROGRESS → REVIEW → DONE</strong>.</p>
+  <p>Click the status badge on any task to cycle through: <strong>TODO → IN_PROGRESS → REVIEW → DONE</strong> (Table view), or drag a card between columns (Board view). Only available if you can manage that task — editing, deleting, and status changes on tasks outside your assigned projects are disabled.</p>
 </div>
 
 <!-- § 6 -->

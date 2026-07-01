@@ -79,7 +79,8 @@ PM Tool has three user types and eight roles:
 | Action | Super Admin | Admin | AM | PM | Team Member | Contractor | Vendor Contact | Client |
 |---|---|---|---|---|---|---|---|---|
 | Create/Edit/Delete Projects | Yes | Yes | Yes | Yes | -- | -- | Request only | -- |
-| Create/Edit Tasks | Yes | Yes | Yes | Yes | -- | -- | -- | -- |
+| Create/Edit/Delete Milestones | Yes | Yes | Yes | Yes | -- | -- | -- | -- |
+| Create/Edit/Delete Tasks | Yes (any project) | Yes (any project) | Yes (any project) | Yes (any project) | Assigned projects only | Assigned projects only | Assigned projects only | -- |
 | Log Time | Yes | Yes | Yes | Yes | Yes | Yes | Yes | -- |
 | Submit Timesheets | Yes | Yes | Yes | Yes | Yes | Yes | Yes | -- |
 | Approve/Reject Timesheets | Yes | Yes | Yes | Yes | -- | -- | -- | -- |
@@ -195,9 +196,9 @@ Requests can be saved as draft or submitted. Once submitted, PM/AM/Admin users c
 Click any project name to open the detail page, which has four tabs:
 
 1. **Work** - Manage milestones and tasks
-   - Create, edit, and delete milestones
-   - Create, edit, and delete tasks under milestones
-   - Quick-cycle task status by clicking the status badge (TODO -> IN_PROGRESS -> REVIEW -> DONE)
+   - Create, edit, and delete milestones (Super Admin, Admin, AM, PM only)
+   - Create, edit, and delete tasks under milestones (managers on any project; Team Members, Contractors, and Vendor Contacts only on projects they're assigned to)
+   - Quick-cycle task status by clicking the status badge (TODO -> IN_PROGRESS -> REVIEW -> DONE) — same access rule as editing tasks
    - View team members panel
 
 2. **Quotes** - Vendor quotes for the project
@@ -225,7 +226,7 @@ Tasks are displayed in a table with status filter tabs:
 - **Review** - Tasks in review
 - **Done** - Completed tasks
 
-Use the **Project** dropdown to filter tasks by project.
+Use the **Project** dropdown to filter tasks by project. This view shows tasks across all projects regardless of assignment, so you can browse work outside your own projects — but you can only edit/delete/create on your own (see below).
 
 ### Creating a Task
 
@@ -244,9 +245,19 @@ Click **+ Create** and fill in:
 | Estimated Hours | No | Time estimate |
 | Is Billable | No | Toggle whether the task is billable |
 
+**Project and Assignee options are scoped to what you have access to:**
+- Super Admin / Admin / AM / PM see every project, and can assign to anyone connected to the selected project (members, assigned PM/AM, or the assigned vendor's users).
+- Team Member, Contractor, and Vendor Contact only see projects they are assigned to in the Project dropdown, and can only assign to people connected to that same project — not arbitrary org-wide users.
+
+Editing, deleting, and reassigning an existing task follow the same project-assignment rule. Tasks outside your assigned projects show as view-only (no Edit/Delete, and drag-and-drop is disabled on the Board view).
+
 ### Quick Status Change
 
-Click the status badge on any task to cycle through: **TODO -> IN_PROGRESS -> REVIEW -> DONE**.
+Click the status badge on any task to cycle through: **TODO -> IN_PROGRESS -> REVIEW -> DONE**. Only available if you can manage that task (see above).
+
+### Board View
+
+The Tasks page offers a **Board** view (Kanban-style columns: To Do, In Progress, Review, Done) alongside the **Table** view. Drag a card between columns to change its status, or click a card to open the edit modal. Both respect the same per-task permission rule as the table.
 
 ---
 
