@@ -1,39 +1,12 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import { tasksApi, type Task, type TaskStatus, type Priority } from '../../api/tasks'
+import { tasksApi, type Task, type TaskStatus } from '../../api/tasks'
 import { projectsApi, type Project } from '../../api/projects'
 import { usersApi, type User } from '../../api/organizations'
 import Modal from '../../components/Modal'
 import TaskModal from './TaskModal'
-
-const STATUS_TABS: { key: TaskStatus | 'ALL'; label: string }[] = [
-  { key: 'ALL', label: 'All' },
-  { key: 'TODO', label: 'To Do' },
-  { key: 'IN_PROGRESS', label: 'In Progress' },
-  { key: 'REVIEW', label: 'Review' },
-  { key: 'DONE', label: 'Done' },
-]
-
-const STATUS_COLORS: Record<TaskStatus, string> = {
-  TODO: 'bg-gray-100 text-gray-600',
-  IN_PROGRESS: 'bg-blue-50 text-blue-700',
-  REVIEW: 'bg-yellow-50 text-yellow-700',
-  DONE: 'bg-green-50 text-green-700',
-}
-
-const PRIORITY_COLORS: Record<Priority, string> = {
-  LOW: 'text-gray-400',
-  MEDIUM: 'text-blue-500',
-  HIGH: 'text-orange-500',
-  URGENT: 'text-red-600',
-}
-
-const STATUS_CYCLE: Record<TaskStatus, TaskStatus> = {
-  TODO: 'IN_PROGRESS',
-  IN_PROGRESS: 'REVIEW',
-  REVIEW: 'DONE',
-  DONE: 'TODO',
-}
+import KanbanBoard from './KanbanBoard'
+import { STATUS_TABS, STATUS_COLORS, PRIORITY_COLORS, STATUS_CYCLE } from './taskConstants'
 
 export default function TasksPage() {
   const { t } = useTranslation()
@@ -44,10 +17,11 @@ export default function TasksPage() {
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'ALL'>('ALL')
   const [projectFilter, setProjectFilter] = useState<number>(0)
   const [modal, setModal] = useState<null | 'create' | Task>(null)
+  const [view, setView] = useState<'table' | 'board'>('board')
 
   const load = async () => {
     const filters = {
-      ...(statusFilter !== 'ALL' ? { status: statusFilter } : {}),
+      ...(view === 'table' && statusFilter !== 'ALL' ? { status: statusFilter } : {}),
       ...(projectFilter ? { projectId: projectFilter } : {}),
     }
     await tasksApi.list(filters).then(r => setTasks(r.data))
@@ -61,10 +35,15 @@ export default function TasksPage() {
     ])
   }, [])
 
-  useEffect(() => { load() }, [statusFilter, projectFilter])
+  useEffect(() => { load() }, [statusFilter, projectFilter, view])
 
   const handleStatusCycle = async (task: Task) => {
     await tasksApi.update(task.id, { status: STATUS_CYCLE[task.status] })
+    load()
+  }
+
+  const handleStatusChange = async (task: Task, status: TaskStatus) => {
+    await tasksApi.update(task.id, { status })
     load()
   }
 
@@ -88,17 +67,31 @@ export default function TasksPage() {
 
       {/* Filters */}
       <div className="flex items-center gap-4 mb-4">
-        {/* Status tabs */}
+        {/* View toggle */}
         <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-          {STATUS_TABS.map(tab => (
-            <button key={tab.key} onClick={() => setStatusFilter(tab.key)}
-              className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-                statusFilter === tab.key ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+          {(['board', 'table'] as const).map(v => (
+            <button key={v} onClick={() => setView(v)}
+              className={`px-3 py-1.5 rounded-md text-xs font-medium capitalize transition-colors ${
+                view === v ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
               }`}>
-              {tab.label}
+              {v}
             </button>
           ))}
         </div>
+
+        {/* Status tabs (table view only) */}
+        {view === 'table' && (
+          <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+            {STATUS_TABS.map(tab => (
+              <button key={tab.key} onClick={() => setStatusFilter(tab.key)}
+                className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                  statusFilter === tab.key ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                }`}>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Project filter */}
         <select value={projectFilter} onChange={e => setProjectFilter(Number(e.target.value))}
@@ -108,9 +101,15 @@ export default function TasksPage() {
         </select>
       </div>
 
-      {/* Table */}
       {loading ? (
         <p className="text-sm text-gray-400">{t('common.loading')}</p>
+      ) : view === 'board' ? (
+        <KanbanBoard
+          tasks={tasks}
+          onStatusChange={handleStatusChange}
+          onEdit={task => setModal(task)}
+          onDelete={handleDelete}
+        />
       ) : (
         <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
           <table className="w-full text-sm">
