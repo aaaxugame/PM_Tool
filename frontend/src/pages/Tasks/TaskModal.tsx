@@ -1,15 +1,19 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { tasksApi, type Task, type TaskStatus, type Priority } from '../../api/tasks'
-import { milestonesApi, type Milestone } from '../../api/projects'
+import { milestonesApi, projectMembersApi, type Milestone } from '../../api/projects'
 import type { Project } from '../../api/projects'
-import type { User } from '../../api/organizations'
 import Modal from '../../components/Modal'
+
+interface AssignableUser {
+  id: number
+  name: string
+  email: string
+}
 
 interface Props {
   task: Task | null
   projects: Project[]
-  users: User[]
   defaultProjectId?: number
   defaultMilestoneId?: number
   onClose: () => void
@@ -29,10 +33,11 @@ const EMPTY = {
   isBillable: true,
 }
 
-export default function TaskModal({ task, projects, users, defaultProjectId, defaultMilestoneId, onClose, onSaved }: Props) {
+export default function TaskModal({ task, projects, defaultProjectId, defaultMilestoneId, onClose, onSaved }: Props) {
   const { t } = useTranslation()
   const [form, setForm] = useState<typeof EMPTY>(EMPTY)
   const [milestones, setMilestones] = useState<Milestone[]>([])
+  const [assignableUsers, setAssignableUsers] = useState<AssignableUser[]>([])
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -61,8 +66,16 @@ export default function TaskModal({ task, projects, users, defaultProjectId, def
   useEffect(() => {
     if (form.projectId) {
       milestonesApi.list(form.projectId).then(r => setMilestones(r.data))
+      projectMembersApi.listAssignableUsers(form.projectId).then(r => {
+        const list = r.data
+        if (task?.assignee && task.projectId === form.projectId && !list.some(u => u.id === task.assignee!.id)) {
+          list.push({ ...task.assignee, email: '' })
+        }
+        setAssignableUsers(list)
+      })
     } else {
       setMilestones([])
+      setAssignableUsers([])
     }
   }, [form.projectId])
 
@@ -143,7 +156,7 @@ export default function TaskModal({ task, projects, users, defaultProjectId, def
             <select value={form.assigneeId} onChange={e => set('assigneeId', Number(e.target.value))}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value={0}>— unassigned —</option>
-              {users.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
+              {assignableUsers.map(u => <option key={u.id} value={u.id}>{u.name}</option>)}
             </select>
           </div>
           <div>

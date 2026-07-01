@@ -34,16 +34,16 @@ export class TasksController {
 
   @Post()
   create(@Body() dto: CreateTaskDto, @Req() req: any) {
-    return this.tasksService.create(dto, req.user.id);
+    return this.tasksService.create(dto, req.user);
   }
 
   @Patch(':id')
-  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateTaskDto) {
-    return this.tasksService.update(id, dto);
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateTaskDto, @Req() req: any) {
+    return this.tasksService.update(id, dto, req.user);
   }
 
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.tasksService.remove(id);
+  remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.tasksService.remove(id, req.user);
   }
 }

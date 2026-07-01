@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../store/authContext'
 import { projectsApi, projectMembersApi, milestonesApi, type ProjectDetail, type ProjectMember, type Milestone, type MilestoneStatus, type ProjectPriority } from '../../api/projects'
 import { tasksApi, type Task, type TaskStatus } from '../../api/tasks'
-import { usersApi, type User, type SimpleUser } from '../../api/organizations'
+import { usersApi, type SimpleUser } from '../../api/organizations'
 import { vendorQuotesApi, budgetsApi, type VendorQuote, type Budget, type QuoteStatus, type PaymentMode } from '../../api/quotesBudgets'
 import { vendorsApi, type Vendor } from '../../api/organizations'
 import Modal from '../../components/Modal'
@@ -56,14 +56,13 @@ export default function ProjectDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { t } = useTranslation()
-  const { hasRole } = useAuth()
+  const { hasRole, user } = useAuth()
   const isVendor = hasRole('CONTRACTOR') || hasRole('VENDOR_CONTACT')
   const canManage = hasRole('ADMIN') || hasRole('SUPER_ADMIN') || hasRole('ACCOUNT_MANAGER') || hasRole('PROJECT_MANAGER')
   const projectId = Number(id)
 
   const [project, setProject] = useState<ProjectDetail | null>(null)
   const [tasks, setTasks] = useState<Task[]>([])
-  const [users, setUsers] = useState<User[]>([])
   const [vendors, setVendors] = useState<Vendor[]>([])
   const [quotes, setQuotes] = useState<VendorQuote[]>([])
   const [budgets, setBudgets] = useState<Budget[]>([])
@@ -103,7 +102,6 @@ export default function ProjectDetailPage() {
   useEffect(() => {
     Promise.all([
       loadProject(), loadTasks(), loadQuotes(), loadBudgets(), loadMembers(),
-      usersApi.list().then(r => setUsers(r.data)),
       vendorsApi.list().then(r => setVendors(r.data)),
       usersApi.listByRole('TEAM_MEMBER').then(r => setAvailableMembers(r.data)),
     ]).finally(() => setLoading(false))
@@ -219,6 +217,10 @@ export default function ProjectDetailPage() {
   const PRIORITY_DOT: Record<string, string> = {
     LOW: 'bg-gray-300', MEDIUM: 'bg-blue-400', HIGH: 'bg-orange-400', URGENT: 'bg-red-500',
   }
+
+  const canManageProjectTasks = canManage
+    || (hasRole('TEAM_MEMBER') && members.some(m => m.userId === user?.id))
+    || (isVendor && !!user?.vendor && project.assignedVendorId === user.vendor.id)
 
   const TABS: { key: ActiveTab; label: string }[] = [
     { key: 'work', label: `Work (${project.milestones.length}M · ${tasks.length}T)` },
@@ -357,14 +359,22 @@ export default function ProjectDetailPage() {
               </span>
               <span className="text-xs text-gray-400 w-24 truncate flex-shrink-0 hidden md:block">{task.assignee?.name ?? '—'}</span>
               <span className="text-xs text-gray-400 w-24 flex-shrink-0 hidden md:block">{task.dueDate ? task.dueDate.slice(0, 10) : '—'}</span>
-              <button onClick={() => handleTaskStatusCycle(task)}
-                className={`px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer whitespace-nowrap flex-shrink-0 ${TASK_STATUS_COLORS[task.status]}`}>
-                {task.status.replace('_', ' ')}
-              </button>
-              <div className="flex gap-2 flex-shrink-0">
-                <button onClick={() => setTModal(task)} className="text-blue-600 hover:underline text-xs">{t('common.edit')}</button>
-                <button onClick={() => handleTaskDelete(task.id)} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>
-              </div>
+              {canManageProjectTasks ? (
+                <button onClick={() => handleTaskStatusCycle(task)}
+                  className={`px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer whitespace-nowrap flex-shrink-0 ${TASK_STATUS_COLORS[task.status]}`}>
+                  {task.status.replace('_', ' ')}
+                </button>
+              ) : (
+                <span className={`px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap flex-shrink-0 ${TASK_STATUS_COLORS[task.status]}`}>
+                  {task.status.replace('_', ' ')}
+                </span>
+              )}
+              {canManageProjectTasks && (
+                <div className="flex gap-2 flex-shrink-0">
+                  <button onClick={() => setTModal(task)} className="text-blue-600 hover:underline text-xs">{t('common.edit')}</button>
+                  <button onClick={() => handleTaskDelete(task.id)} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>
+                </div>
+              )}
             </div>
           )
 
@@ -372,15 +382,19 @@ export default function ProjectDetailPage() {
             <>
               <div className="flex justify-between items-center mb-4">
                 <h2 className="text-base font-semibold text-gray-700">Work Plan</h2>
-                <button onClick={openMCreate} className="bg-blue-600 text-white text-sm px-3 py-1.5 rounded-lg hover:bg-blue-700">
-                  + Add Milestone
-                </button>
+                {canManage && (
+                  <button onClick={openMCreate} className="bg-blue-600 text-white text-sm px-3 py-1.5 rounded-lg hover:bg-blue-700">
+                    + Add Milestone
+                  </button>
+                )}
               </div>
 
               {project.milestones.length === 0 ? (
                 <div className="bg-white rounded-xl border border-dashed border-gray-300 py-12 text-center">
-                  <p className="text-gray-400 text-sm mb-3">No milestones yet — add one to start building your work plan.</p>
-                  <button onClick={openMCreate} className="text-blue-600 text-sm hover:underline">+ Add Milestone</button>
+                  <p className="text-gray-400 text-sm mb-3">No milestones yet{canManage ? ' — add one to start building your work plan.' : '.'}</p>
+                  {canManage && (
+                    <button onClick={openMCreate} className="text-blue-600 text-sm hover:underline">+ Add Milestone</button>
+                  )}
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -392,12 +406,12 @@ export default function ProjectDetailPage() {
                         {/* Milestone header */}
                         <div className={`flex items-center justify-between px-4 py-3 ${m.status === 'COMPLETED' ? 'bg-green-50' : 'bg-gray-50'}`}>
                           <div className="flex items-center gap-3 min-w-0">
-                            <button onClick={() => handleMComplete(m)} title="Toggle complete"
+                            <button onClick={() => canManage && handleMComplete(m)} title="Toggle complete" disabled={!canManage}
                               className={`w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-colors ${
                                 m.status === 'COMPLETED'
                                   ? 'bg-green-500 border-green-500 text-white'
                                   : 'border-gray-400 hover:border-green-500'
-                              }`}>
+                              } ${!canManage ? 'cursor-default' : ''}`}>
                               {m.status === 'COMPLETED' && <span className="text-xs leading-none">✓</span>}
                             </button>
                             <span className={`font-semibold text-sm ${m.status === 'COMPLETED' ? 'line-through text-gray-400' : 'text-gray-800'}`}>
@@ -411,22 +425,26 @@ export default function ProjectDetailPage() {
                             )}
                             <span className="text-xs text-gray-400 flex-shrink-0">{doneCount}/{mTasks.length} done</span>
                           </div>
-                          <div className="flex items-center gap-3 flex-shrink-0">
-                            <button onClick={() => openMEdit(m)} className="text-blue-600 hover:underline text-xs">{t('common.edit')}</button>
-                            <button onClick={() => handleMDelete(m.id)} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>
-                          </div>
+                          {canManage && (
+                            <div className="flex items-center gap-3 flex-shrink-0">
+                              <button onClick={() => openMEdit(m)} className="text-blue-600 hover:underline text-xs">{t('common.edit')}</button>
+                              <button onClick={() => handleMDelete(m.id)} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>
+                            </div>
+                          )}
                         </div>
 
                         {/* Tasks nested under this milestone */}
                         {mTasks.map(renderTaskRow)}
 
                         {/* Add task row */}
-                        <div className={`px-10 py-2 ${mTasks.length > 0 ? 'border-t border-gray-100' : ''}`}>
-                          <button onClick={() => openTCreate(m.id)}
-                            className="text-blue-500 text-xs hover:text-blue-700 hover:underline">
-                            + Add Task
-                          </button>
-                        </div>
+                        {canManageProjectTasks && (
+                          <div className={`px-10 py-2 ${mTasks.length > 0 ? 'border-t border-gray-100' : ''}`}>
+                            <button onClick={() => openTCreate(m.id)}
+                              className="text-blue-500 text-xs hover:text-blue-700 hover:underline">
+                              + Add Task
+                            </button>
+                          </div>
+                        )}
                       </div>
                     )
                   })}
@@ -627,7 +645,6 @@ export default function ProjectDetailPage() {
         <TaskModal
           task={tModal === 'create' ? null : tModal}
           projects={[project]}
-          users={users}
           defaultProjectId={projectId}
           defaultMilestoneId={tModal === 'create' ? tMilestoneId : undefined}
           onClose={() => { setTModal(null); setTMilestoneId(undefined) }}

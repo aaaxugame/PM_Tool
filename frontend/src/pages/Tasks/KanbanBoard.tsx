@@ -4,18 +4,19 @@ import { BOARD_COLUMNS, PRIORITY_COLORS } from './taskConstants'
 
 interface KanbanBoardProps {
   tasks: Task[]
+  canManage: (task: Task) => boolean
   onStatusChange: (task: Task, status: TaskStatus) => void
   onEdit: (task: Task) => void
   onDelete: (id: number) => void
 }
 
-export default function KanbanBoard({ tasks, onStatusChange, onEdit, onDelete }: KanbanBoardProps) {
+export default function KanbanBoard({ tasks, canManage, onStatusChange, onEdit, onDelete }: KanbanBoardProps) {
   const [draggingId, setDraggingId] = useState<number | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<TaskStatus | null>(null)
 
   const handleDrop = (status: TaskStatus) => {
     const task = tasks.find(t => t.id === draggingId)
-    if (task && task.status !== status) onStatusChange(task, status)
+    if (task && task.status !== status && canManage(task)) onStatusChange(task, status)
     setDraggingId(null)
     setDragOverColumn(null)
   }
@@ -40,28 +41,32 @@ export default function KanbanBoard({ tasks, onStatusChange, onEdit, onDelete }:
             </div>
 
             <div className="space-y-2">
-              {colTasks.map(task => (
+              {colTasks.map(task => {
+                const manageable = canManage(task)
+                return (
                 <div
                   key={task.id}
-                  draggable
-                  onDragStart={() => setDraggingId(task.id)}
+                  draggable={manageable}
+                  onDragStart={() => manageable && setDraggingId(task.id)}
                   onDragEnd={() => { setDraggingId(null); setDragOverColumn(null) }}
-                  onClick={() => onEdit(task)}
-                  className={`bg-white rounded-lg border border-gray-200 p-3 shadow-sm cursor-pointer hover:shadow-md transition-shadow ${
-                    draggingId === task.id ? 'opacity-40' : ''
-                  }`}
+                  onClick={() => manageable && onEdit(task)}
+                  className={`bg-white rounded-lg border border-gray-200 p-3 shadow-sm transition-shadow ${
+                    manageable ? 'cursor-pointer hover:shadow-md' : 'cursor-default'
+                  } ${draggingId === task.id ? 'opacity-40' : ''}`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p className={`text-sm font-medium text-gray-800 ${task.status === 'DONE' ? 'line-through text-gray-400' : ''}`}>
                       {task.name}
                     </p>
-                    <button
-                      onClick={e => { e.stopPropagation(); onDelete(task.id) }}
-                      className="text-gray-300 hover:text-red-500 text-xs shrink-0"
-                      title="Delete"
-                    >
-                      ✕
-                    </button>
+                    {manageable && (
+                      <button
+                        onClick={e => { e.stopPropagation(); onDelete(task.id) }}
+                        className="text-gray-300 hover:text-red-500 text-xs shrink-0"
+                        title="Delete"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
                   <p className="text-xs text-gray-400 mt-1 truncate">{task.project.name}</p>
                   <div className="flex items-center justify-between mt-2">
@@ -74,7 +79,8 @@ export default function KanbanBoard({ tasks, onStatusChange, onEdit, onDelete }:
                     <p className="text-xs text-gray-500 mt-1">👤 {task.assignee.name}</p>
                   )}
                 </div>
-              ))}
+                )
+              })}
               {colTasks.length === 0 && (
                 <p className="text-xs text-gray-300 text-center py-6">No tasks</p>
               )}

@@ -101,6 +101,8 @@ export const projectMembersApi = {
   list: (projectId: number) => api.get<ProjectMember[]>(`/projects/${projectId}/members`),
   add: (projectId: number, userId: number) => api.post<ProjectMember>(`/projects/${projectId}/members`, { userId }),
   remove: (projectId: number, userId: number) => api.delete(`/projects/${projectId}/members/${userId}`),
+  listAssignableUsers: (projectId: number) =>
+    api.get<{ id: number; name: string; email: string }[]>(`/projects/${projectId}/assignable-users`),
 }
 
 export const milestonesApi = {

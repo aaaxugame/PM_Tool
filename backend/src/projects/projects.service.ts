@@ -67,7 +67,10 @@ export class ProjectsService {
   findMine(userId: number) {
     return this.prisma.project.findMany({
       where: {
-        assignments: { some: { userId } },
+        OR: [
+          { assignments: { some: { userId } } },
+          { members: { some: { userId } } },
+        ],
         status: { not: ProjectStatus.ARCHIVED },
       },
       include: PROJECT_INCLUDE,
@@ -221,6 +224,30 @@ export class ProjectsService {
 
   async removeMember(projectId: number, userId: number) {
     await this.prisma.projectMember.deleteMany({ where: { projectId, userId } });
+  }
+
+  async listAssignableUsers(projectId: number) {
+    const project = await this.findOne(projectId);
+    const users = new Map<number, { id: number; name: string; email: string }>();
+
+    const assignments = await this.prisma.projectAssignment.findMany({
+      where: { projectId },
+      include: { user: { select: { id: true, name: true, email: true } } },
+    });
+    assignments.forEach(a => users.set(a.user.id, a.user));
+
+    const members = await this.listMembers(projectId);
+    members.forEach(m => users.set(m.user.id, m.user));
+
+    if (project.assignedVendorId) {
+      const vendorUsers = await this.prisma.user.findMany({
+        where: { vendorId: project.assignedVendorId },
+        select: { id: true, name: true, email: true },
+      });
+      vendorUsers.forEach(u => users.set(u.id, u));
+    }
+
+    return Array.from(users.values());
   }
 
   async remove(id: number) {

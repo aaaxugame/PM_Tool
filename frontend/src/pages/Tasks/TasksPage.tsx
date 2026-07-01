@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { tasksApi, type Task, type TaskStatus } from '../../api/tasks'
 import { projectsApi, type Project } from '../../api/projects'
-import { usersApi, type User } from '../../api/organizations'
+import { useAuth } from '../../store/authContext'
 import Modal from '../../components/Modal'
 import TaskModal from './TaskModal'
 import KanbanBoard from './KanbanBoard'
@@ -10,14 +10,21 @@ import { STATUS_TABS, STATUS_COLORS, PRIORITY_COLORS, STATUS_CYCLE } from './tas
 
 export default function TasksPage() {
   const { t } = useTranslation()
+  const { hasRole } = useAuth()
+  const isManagerRole = hasRole('SUPER_ADMIN') || hasRole('ADMIN') || hasRole('ACCOUNT_MANAGER') || hasRole('PROJECT_MANAGER')
+  const isVendorRole = hasRole('CONTRACTOR') || hasRole('VENDOR_CONTACT')
+
   const [tasks, setTasks] = useState<Task[]>([])
   const [projects, setProjects] = useState<Project[]>([])
-  const [users, setUsers] = useState<User[]>([])
+  const [manageableProjects, setManageableProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState<TaskStatus | 'ALL'>('ALL')
   const [projectFilter, setProjectFilter] = useState<number>(0)
   const [modal, setModal] = useState<null | 'create' | Task>(null)
   const [view, setView] = useState<'table' | 'board'>('board')
+
+  const manageableProjectIds = new Set(manageableProjects.map(p => p.id))
+  const canManageTask = (task: Task) => isManagerRole || manageableProjectIds.has(task.projectId)
 
   const load = async () => {
     const filters = {
@@ -29,10 +36,14 @@ export default function TasksPage() {
   }
 
   useEffect(() => {
-    Promise.all([
-      projectsApi.list().then(r => setProjects(r.data)),
-      usersApi.list().then(r => setUsers(r.data)),
-    ])
+    projectsApi.list().then(r => setProjects(r.data))
+    if (isManagerRole) {
+      projectsApi.list().then(r => setManageableProjects(r.data))
+    } else if (isVendorRole) {
+      projectsApi.listVendor(false).then(r => setManageableProjects(r.data))
+    } else {
+      projectsApi.listMine().then(r => setManageableProjects(r.data))
+    }
   }, [])
 
   useEffect(() => { load() }, [statusFilter, projectFilter, view])
@@ -60,9 +71,11 @@ export default function TasksPage() {
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-semibold text-gray-800">{t('nav.tasks')}</h1>
-        <button onClick={() => setModal('create')} className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700">
-          + {t('common.create')}
-        </button>
+        {(isManagerRole || manageableProjects.length > 0) && (
+          <button onClick={() => setModal('create')} className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700">
+            + {t('common.create')}
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -106,6 +119,7 @@ export default function TasksPage() {
       ) : view === 'board' ? (
         <KanbanBoard
           tasks={tasks}
+          canManage={canManageTask}
           onStatusChange={handleStatusChange}
           onEdit={task => setModal(task)}
           onDelete={handleDelete}
@@ -143,14 +157,24 @@ export default function TasksPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-500">{task.dueDate ? task.dueDate.slice(0, 10) : '—'}</td>
                   <td className="px-4 py-3">
-                    <button onClick={() => handleStatusCycle(task)}
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer ${STATUS_COLORS[task.status]}`}>
-                      {task.status.replace('_', ' ')}
-                    </button>
+                    {canManageTask(task) ? (
+                      <button onClick={() => handleStatusCycle(task)}
+                        className={`px-2 py-0.5 rounded-full text-xs font-medium cursor-pointer ${STATUS_COLORS[task.status]}`}>
+                        {task.status.replace('_', ' ')}
+                      </button>
+                    ) : (
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${STATUS_COLORS[task.status]}`}>
+                        {task.status.replace('_', ' ')}
+                      </span>
+                    )}
                   </td>
                   <td className="px-4 py-3 text-right space-x-2">
-                    <button onClick={() => setModal(task)} className="text-blue-600 hover:underline text-xs">{t('common.edit')}</button>
-                    <button onClick={() => handleDelete(task.id)} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>
+                    {canManageTask(task) && (
+                      <>
+                        <button onClick={() => setModal(task)} className="text-blue-600 hover:underline text-xs">{t('common.edit')}</button>
+                        <button onClick={() => handleDelete(task.id)} className="text-red-500 hover:underline text-xs">{t('common.delete')}</button>
+                      </>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -162,8 +186,7 @@ export default function TasksPage() {
       {modal !== null && (
         <TaskModal
           task={modal === 'create' ? null : modal}
-          projects={projects}
-          users={users}
+          projects={isManagerRole ? projects : manageableProjects}
           onClose={closeModal}
           onSaved={onSaved}
         />

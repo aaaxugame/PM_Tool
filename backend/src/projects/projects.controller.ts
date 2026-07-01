@@ -87,6 +87,12 @@ export class ProjectsController {
     return this.projectsService.listMembers(id);
   }
 
+  @Get(':id/assignable-users')
+  listAssignableUsers(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.listAssignableUsers(id);
+  }
+
+
   @Post(':id/members')
   addMember(@Param('id', ParseIntPipe) id: number, @Body('userId', ParseIntPipe) userId: number) {
     return this.projectsService.addMember(id, userId);
