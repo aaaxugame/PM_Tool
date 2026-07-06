@@ -72,7 +72,7 @@ PM Tool has three user types and eight roles:
 ### Client Users
 | Role | Description |
 |---|---|
-| **Client** | Views own projects, reviews and approves invoices |
+| **Client** | Views own projects, reviews and approves/declines project proposals, reviews and approves invoices |
 
 ### Permission Summary
 
@@ -87,6 +87,8 @@ PM Tool has three user types and eight roles:
 | Create Client Invoices | Yes | Yes | Yes | Yes | -- | -- | -- | -- |
 | Create Vendor Invoices | -- | -- | -- | -- | -- | -- | Yes | -- |
 | Approve Invoices | Yes | Yes | Yes | -- | -- | -- | -- | Yes |
+| Send / Revise Project Proposals | Yes | Yes | Yes | Yes | -- | -- | -- | -- |
+| Approve/Decline/Request Revision on Proposals | Yes | Yes | Yes | Yes | -- | -- | -- | Yes (own projects only) |
 | View Financials | Yes | Yes | Yes | Yes | -- | -- | -- | -- |
 | View Reports | Yes | Yes | Yes | Yes | -- | -- | -- | -- |
 | Admin Panel | Yes | Yes | -- | -- | -- | -- | -- | -- |
@@ -191,12 +193,27 @@ Vendors can submit project requests by clicking **+ New Request**. The request f
 
 Requests can be saved as draft or submitted. Once submitted, PM/AM/Admin users can **Approve** or **Reject** the request from the Vendor Requests tab or their dashboard.
 
+### Client Proposal Workflow
+
+For any project with a client assigned, scope and billing terms must be proposed to and approved by the client before the project becomes active. This is separate from Vendor Project Requests above — it governs client sign-off on cost, not a vendor's request to work on a project.
+
+1. **Build the proposal** (PM, AM, Admin, Super Admin) - set the project's Billing Method, Estimated Cost, Estimated Hours, and, for Time & Materials or Mixed billing, an **Hourly Rate**. Add milestones with a **Contracted Amount** for Milestone or Mixed billing.
+2. **Send Proposal** - from the project detail page, click **Send Proposal**. The client receives an email notification. Sending is blocked with an error if an hourly rate is required but not set.
+3. **Client reviews** - the client opens the project and sees a Proposal panel where they can **Approve**, **Decline** (with a required reason), or **Request Revision** (with notes).
+4. **On approval** - the project automatically moves to ACTIVE status, and the Billing Method, Estimated Cost, Estimated Hours, Hourly Rate, and each milestone's Contracted Amount become locked — they cannot be edited further.
+5. **Starting a new revision** - PM/AM/Admin can click **Start New Revision** to unlock these fields again and bump the proposal version, then edit and resend for approval.
+
+**Proposal statuses:** DRAFT -> SENT -> APPROVED / DECLINED / REVISION_REQUESTED. From any of the latter three, starting a new revision returns the proposal to DRAFT with the version number incremented.
+
+A client can only view and act on proposals for projects belonging to their own organization.
+
 ### Project Detail Page
 
 Click any project name to open the detail page, which has four tabs:
 
 1. **Work** - Manage milestones and tasks
    - Create, edit, and delete milestones (Super Admin, Admin, AM, PM only)
+   - Each milestone can carry a **Contracted Amount**, used to bill the client when marked complete (see Client Proposal Workflow above). This amount is locked once the project's proposal is approved.
    - Create, edit, and delete tasks under milestones (managers on any project; Team Members, Contractors, and Vendor Contacts only on projects they're assigned to)
    - Quick-cycle task status by clicking the status badge (TODO -> IN_PROGRESS -> REVIEW -> DONE) — same access rule as editing tasks
    - View team members panel
@@ -344,11 +361,13 @@ Use the **Status** filter to filter invoices by their current status.
 
 **Creating a Client Invoice** (PM, AM, Admin):
 
-1. Click **+ Create Invoice**
+1. Click **+ New Client Invoice**
 2. Select the **Project** and **Client**
 3. Add line items with Description, Quantity, Unit Price
 4. Set tax rate and currency (auto-populated from client settings)
 5. Save as Draft
+
+**Generating from Milestones** (PM, AM, Admin): For projects billed on a Milestone or Mixed basis, click **⚡ Generate from Milestones**, select the project, and a draft invoice is created automatically with one line item per completed milestone, using each milestone's Contracted Amount. Milestones already billed to the client on a submitted, approved, or paid invoice are excluded from the count.
 
 **Invoice Lifecycle:**
 
