@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../store/authContext'
-import { invoicesApi, type Invoice, type InvoiceStatus, type InvoiceType, type InvoiceDetail } from '../../api/invoices'
+import { invoicesApi, type Invoice, type InvoiceStatus, type InvoiceType, type InvoiceDetail, type ClientEligibleMilestones } from '../../api/invoices'
 import { clientsApi, type Client, vendorsApi, type Vendor } from '../../api/organizations'
 import { projectsApi, type Project } from '../../api/projects'
 import Modal from '../../components/Modal'
@@ -51,6 +51,13 @@ export default function InvoicesPage() {
   const [form, setForm]                     = useState<any>({})
   const [lineItems, setLineItems]           = useState<LineItemForm[]>([{ ...EMPTY_LINE }])
   const [saving, setSaving]                 = useState(false)
+
+  // Client auto-generate-from-milestones modal (PM/AM)
+  const [clientAutoModal, setClientAutoModal]           = useState(false)
+  const [clientAutoProjectId, setClientAutoProjectId]   = useState(0)
+  const [clientAutoPreview, setClientAutoPreview]       = useState<ClientEligibleMilestones | null>(null)
+  const [clientAutoError, setClientAutoError]           = useState('')
+  const [clientAutoGenerating, setClientAutoGenerating] = useState(false)
 
   // Reject / revision modals
   const [rejectModal, setRejectModal]       = useState<Invoice | null>(null)
@@ -129,6 +136,42 @@ export default function InvoicesPage() {
     } finally { setSaving(false) }
   }
 
+  // ── Client auto-generate-from-milestones ─────────────────────────────────
+
+  const openClientAuto = () => {
+    setClientAutoProjectId(0)
+    setClientAutoPreview(null)
+    setClientAutoError('')
+    setClientAutoModal(true)
+  }
+
+  useEffect(() => {
+    if (!clientAutoModal || !clientAutoProjectId) { setClientAutoPreview(null); return }
+    setClientAutoError('')
+    invoicesApi.getClientEligibleMilestones(clientAutoProjectId)
+      .then(r => {
+        setClientAutoPreview(r.data)
+        if (r.data.billingMethod !== 'MILESTONE' && r.data.billingMethod !== 'MIXED') {
+          setClientAutoError('This project is not billed on a milestone basis.')
+        } else if (r.data.milestones.length === 0) {
+          setClientAutoError('No eligible completed milestones found to invoice.')
+        }
+      })
+      .catch(e => setClientAutoError(e?.response?.data?.message ?? 'Failed to load eligible milestones'))
+  }, [clientAutoProjectId, clientAutoModal])
+
+  const handleClientAutoGenerate = async () => {
+    if (!clientAutoProjectId) return
+    setClientAutoGenerating(true)
+    try {
+      await invoicesApi.autoGenerateClient(clientAutoProjectId)
+      await load()
+      setClientAutoModal(false)
+    } catch (e: any) {
+      setClientAutoError(e?.response?.data?.message ?? 'Auto-generate failed')
+    } finally { setClientAutoGenerating(false) }
+  }
+
   // ── Workflow actions ─────────────────────────────────────────────────────
 
   const handleSubmit  = async (inv: Invoice) => { await invoicesApi.submit(inv.id);  load() }
@@ -182,7 +225,13 @@ export default function InvoicesPage() {
             </button>
           )}
 
-          {/* PM/AM: client invoice button */}
+          {/* PM/AM: client invoice buttons */}
+          {(isAM || isPM) && tab === 'CLIENT' && (
+            <button onClick={openClientAuto}
+              className="border border-gray-300 text-gray-700 text-sm px-4 py-2 rounded-lg hover:bg-gray-50">
+              ⚡ Generate from Milestones
+            </button>
+          )}
           {(isAM || isPM) && tab === 'CLIENT' && (
             <button onClick={openClientCreate}
               className="bg-blue-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-blue-700">
@@ -424,6 +473,42 @@ export default function InvoicesPage() {
               disabled={saving || !form.invoiceDate || !form.dueDate || lineItems.every(l => !l.description || !l.unitPrice)}
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
               {saving ? 'Saving…' : 'Create Invoice'}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Client Auto-generate-from-Milestones Modal (PM/AM) ── */}
+      {clientAutoModal && (
+        <Modal title="Generate Client Invoice from Milestones" onClose={() => setClientAutoModal(false)}>
+          <p className="text-sm text-gray-500 mb-4">
+            Select a client-facing project billed on a milestone basis. A draft invoice will be created
+            with one line item per completed milestone, using each milestone's contracted amount.
+          </p>
+          <div className="mb-4">
+            <label className="block text-xs font-medium text-gray-600 mb-1">Project *</label>
+            <select value={clientAutoProjectId} onChange={e => setClientAutoProjectId(Number(e.target.value))} className={inp}>
+              <option value={0}>— select project —</option>
+              {projects
+                .filter(p => p.clientId && (p.billingMethod === 'MILESTONE' || p.billingMethod === 'MIXED'))
+                .map(p => <option key={p.id} value={p.id}>{p.name} ({p.client?.name})</option>)}
+            </select>
+          </div>
+          {clientAutoPreview && clientAutoPreview.milestones.length > 0 && (
+            <div className="mb-4 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-700">
+              {clientAutoPreview.milestones.length} eligible completed milestone{clientAutoPreview.milestones.length !== 1 ? 's' : ''}, total{' '}
+              ${clientAutoPreview.milestones.reduce((s, m) => s + parseFloat(m.amount ?? '0'), 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            </div>
+          )}
+          {clientAutoError && <p className="text-xs text-red-600 mb-3">{clientAutoError}</p>}
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setClientAutoModal(false)} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">Cancel</button>
+            <button
+              onClick={handleClientAutoGenerate}
+              disabled={!clientAutoProjectId || clientAutoGenerating || !!clientAutoError}
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+            >
+              {clientAutoGenerating ? 'Generating…' : '⚡ Generate Draft'}
             </button>
           </div>
         </Modal>

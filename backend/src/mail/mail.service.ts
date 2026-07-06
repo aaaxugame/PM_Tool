@@ -87,4 +87,57 @@ export class MailService {
       this.logger.log(`Invoice sent email preview: ${preview}`);
     }
   }
+
+  async sendProposalSent(opts: {
+    toEmail:         string;
+    toName:          string;
+    projectId:       number;
+    projectName:     string;
+    proposalVersion: number;
+    billingMethod:   string;
+    proposedCost:    string | null;
+    hourlyRate:      string | null;
+    currency:        string;
+    fromName:        string;
+  }) {
+    const transport = await this.getTransporter();
+    const fromAddress = this.config.get<string>('SMTP_FROM') ?? 'noreply@pmtool.local';
+    const link = `${this.config.get('FRONTEND_URL') ?? 'http://localhost:5173'}/projects/${opts.projectId}`;
+
+    const info = await transport.sendMail({
+      from:    `"${opts.fromName}" <${fromAddress}>`,
+      to:      `"${opts.toName}" <${opts.toEmail}>`,
+      subject: `Project proposal for "${opts.projectName}" (v${opts.proposalVersion}) is ready for your review`,
+      text: [
+        `Hi ${opts.toName},`,
+        '',
+        `A project proposal for "${opts.projectName}" has been sent to you for review.`,
+        '',
+        `  Billing method : ${opts.billingMethod.replace(/_/g, ' ')}`,
+        opts.hourlyRate ? `  Hourly rate    : ${opts.currency} ${opts.hourlyRate}/hr` : null,
+        opts.proposedCost ? `  Proposed cost  : ${opts.currency} ${opts.proposedCost}` : null,
+        '',
+        'Please log in to the PM Tool to review, and approve or decline this proposal.',
+        '',
+        `Best regards,`,
+        opts.fromName,
+      ].filter((line): line is string => line !== null).join('\n'),
+      html: `
+        <p>Hi ${opts.toName},</p>
+        <p>A project proposal for <strong>${opts.projectName}</strong> has been sent to you for review.</p>
+        <table style="border-collapse:collapse;margin:16px 0">
+          <tr><td style="padding:4px 12px 4px 0;color:#6b7280">Billing method</td><td><strong>${opts.billingMethod.replace(/_/g, ' ')}</strong></td></tr>
+          ${opts.hourlyRate ? `<tr><td style="padding:4px 12px 4px 0;color:#6b7280">Hourly rate</td><td><strong>${opts.currency} ${opts.hourlyRate}/hr</strong></td></tr>` : ''}
+          ${opts.proposedCost ? `<tr><td style="padding:4px 12px 4px 0;color:#6b7280">Proposed cost</td><td><strong>${opts.currency} ${opts.proposedCost}</strong></td></tr>` : ''}
+        </table>
+        <p>Please <a href="${link}">log in to the PM Tool</a> to review, and approve or decline this proposal.</p>
+        <p>Best regards,<br>${opts.fromName}</p>
+      `,
+    });
+
+    const preview = nodemailer.getTestMessageUrl(info);
+    if (preview) {
+      this.logger.log(`Proposal sent email preview: ${preview}`);
+    }
+  }
 }

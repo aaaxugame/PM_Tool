@@ -177,7 +177,29 @@
     "priority_LOW": "低",
     "priority_MEDIUM": "中",
     "priority_HIGH": "高",
-    "priority_URGENT": "緊急"
+    "priority_URGENT": "緊急",
+    "hourlyRate": "時薪",
+    "milestoneAmount": "合約金額"
+  },
+  "proposals": {
+    "sendProposal": "發送提案",
+    "startRevision": "開始新修訂",
+    "approve": "批准提案",
+    "decline": "拒絕提案",
+    "requestRevision": "請求修訂",
+    "declineReason": "拒絕原因",
+    "declineReasonPlaceholder": "說明需要修改的內容…",
+    "revisionNotePlaceholder": "描述需要修訂的內容…",
+    "hourlyRateRequired": "按工時與材料或混合計費方式發送提案前，必須設定時薪。",
+    "lockedNotice": "此提案已獲批准，條款已鎖定。請先開始新修訂才能修改。",
+    "version": "版本",
+    "status": {
+      "DRAFT": "草稿",
+      "SENT": "待客戶審核",
+      "APPROVED": "已批准",
+      "DECLINED": "已拒絕",
+      "REVISION_REQUESTED": "已請求修訂"
+    }
   },
   "quotes": {
     "title": "報價與預算",

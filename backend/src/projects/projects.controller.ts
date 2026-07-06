@@ -61,8 +61,8 @@ export class ProjectsController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.projectsService.findOne(id);
+  findOne(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.projectsService.findOne(id, req.user);
   }
 
   @Post()
@@ -104,5 +104,44 @@ export class ProjectsController {
     @Param('userId', ParseIntPipe) userId: number,
   ) {
     return this.projectsService.removeMember(id, userId);
+  }
+
+  // ── Client Proposal workflow ──────────────────────────────────────────────
+
+  @Post(':id/proposal/send')
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER')
+  sendProposal(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.sendProposal(id);
+  }
+
+  @Post(':id/proposal/approve')
+  approveProposal(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.projectsService.approveProposal(id, req.user.roles ?? [], req.user.client?.id);
+  }
+
+  @Post(':id/proposal/decline')
+  declineProposal(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('note') note: string,
+    @Req() req: any,
+  ) {
+    return this.projectsService.declineProposal(id, note, req.user.roles ?? [], req.user.client?.id);
+  }
+
+  @Post(':id/proposal/request-revision')
+  requestProposalRevision(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('note') note: string,
+    @Req() req: any,
+  ) {
+    return this.projectsService.requestProposalRevision(id, note, req.user.roles ?? [], req.user.client?.id);
+  }
+
+  @Post(':id/proposal/revise')
+  @UseGuards(RolesGuard)
+  @Roles('SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER')
+  reviseProposal(@Param('id', ParseIntPipe) id: number) {
+    return this.projectsService.reviseProposal(id);
   }
 }

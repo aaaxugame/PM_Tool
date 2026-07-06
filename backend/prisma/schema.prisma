@@ -146,6 +146,12 @@ model Project {
   requiredSkillSet   String?
   createdAt          DateTime        @default(now())
 
+  proposalStatus       ProposalStatus @default(DRAFT)
+  proposalVersion      Int            @default(1)
+  proposalSentAt       DateTime?
+  proposalRespondedAt  DateTime?
+  proposalRevisionNote String?
+
   client   Client? @relation(fields: [clientId], references: [id])
   clientId Int?
   createdBy   User @relation("ProjectCreatedBy", fields: [createdById], references: [id])
@@ -189,6 +195,14 @@ enum BillingMethod {
   TIME_AND_MATERIALS
   MILESTONE
   MIXED
+}
+
+enum ProposalStatus {
+  DRAFT
+  SENT
+  APPROVED
+  DECLINED
+  REVISION_REQUESTED
 }
 
 enum ProjectApproval {
@@ -280,6 +294,7 @@ model Milestone {
   status          MilestoneStatus @default(PENDING)
   triggersInvoice Boolean         @default(false)
   completedAt     DateTime?
+  amount          Decimal?        @db.Decimal(12, 2)
   createdAt       DateTime        @default(now())
 
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)

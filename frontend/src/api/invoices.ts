@@ -86,6 +86,12 @@ export interface EligibleItems {
   milestones: Array<{ id: number; name: string; status: string; dueDate: string | null }>
 }
 
+export interface ClientEligibleMilestones {
+  clientId:      number
+  billingMethod: string
+  milestones: Array<{ id: number; name: string; status: string; dueDate: string | null; amount: string | null }>
+}
+
 export interface FinancialRow {
   projectId:    number
   projectName:  string
@@ -125,6 +131,8 @@ export const invoicesApi = {
 
   autoGenerate: (projectId: number) => api.post<InvoiceDetail>('/invoices/auto-generate', { projectId }),
   getEligible:  (projectId: number) => api.get<EligibleItems>(`/invoices/eligible/${projectId}`),
+  autoGenerateClient: (projectId: number) => api.post<InvoiceDetail>('/invoices/auto-generate-client', { projectId }),
+  getClientEligibleMilestones: (projectId: number) => api.get<ClientEligibleMilestones>(`/invoices/eligible-client/${projectId}`),
   getFinancials:(filters?: { projectId?: number; vendorId?: number; clientId?: number }) => {
     const params = new URLSearchParams()
     if (filters?.projectId) params.set('projectId', String(filters.projectId))

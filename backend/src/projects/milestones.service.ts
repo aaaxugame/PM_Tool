@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
 import { UpdateMilestoneDto } from './dto/update-milestone.dto';
@@ -33,6 +33,19 @@ export class MilestonesService {
 
   async update(projectId: number, id: number, dto: UpdateMilestoneDto) {
     await this.findOne(projectId, id);
+
+    if (dto.amount !== undefined) {
+      const project = await this.prisma.project.findUnique({
+        where: { id: projectId },
+        select: { proposalStatus: true, clientId: true },
+      });
+      if (project?.clientId && project.proposalStatus === 'APPROVED') {
+        throw new BadRequestException(
+          'Cannot change the contracted amount on an approved proposal. Start a new proposal revision first.',
+        );
+      }
+    }
+
     const { dueDate, ...rest } = dto;
     const data: any = { ...rest };
     if (dueDate !== undefined) data.dueDate = new Date(dueDate);

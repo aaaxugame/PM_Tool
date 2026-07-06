@@ -165,8 +165,13 @@ export class InvoicesService {
     }
 
     if (billingMethod === BillingMethod.MILESTONE || billingMethod === BillingMethod.MIXED) {
-      for (const m of milestones) {
-        const price = Number(vendorQuote?.quotedPrice ?? 0) / Math.max(milestones.length, 1);
+      for (const m of milestones as any[]) {
+        if (m.amount == null) {
+          throw new BadRequestException(
+            `Milestone "${m.name}" has no contracted amount set. Set an amount on the milestone before generating an invoice.`,
+          );
+        }
+        const price = Number(m.amount);
         lineItems.push({
           description: m.name,
           quantity:    1,
@@ -209,6 +214,98 @@ export class InvoicesService {
         vendorId,
         projectId,
         vendorQuoteId: vendorQuote?.id ?? undefined,
+        createdById: userId,
+        version:     1,
+        lineItems: { create: lineItems },
+      },
+      include: INVOICE_INCLUDE,
+    });
+  }
+
+  // ── Eligible completed milestones for CLIENT invoice auto-generation ────────
+
+  async getClientEligibleMilestones(projectId: number) {
+    const project = await this.prisma.project.findUnique({
+      where: { id: projectId },
+      select: { id: true, name: true, clientId: true, billingMethod: true },
+    });
+    if (!project) throw new NotFoundException('Project not found');
+    if (!project.clientId) {
+      throw new BadRequestException('This project has no client — milestone billing to a client does not apply');
+    }
+
+    const allMilestones = await this.prisma.milestone.findMany({
+      where: { projectId, status: 'COMPLETED' },
+      include: {
+        invoiceLineItems: {
+          include: { invoice: { select: { status: true, invoiceType: true } } },
+        },
+      },
+    });
+
+    const eligibleMilestones = allMilestones.filter(m => {
+      const alreadyInvoiced = m.invoiceLineItems.some(li =>
+        li.invoice?.invoiceType === 'CLIENT' && ['SUBMITTED', 'APPROVED', 'PAID'].includes(li.invoice?.status ?? ''),
+      );
+      return !alreadyInvoiced;
+    });
+
+    return {
+      clientId: project.clientId,
+      billingMethod: project.billingMethod,
+      milestones: eligibleMilestones.map(({ invoiceLineItems: _drop, ...m }) => m),
+    };
+  }
+
+  // ── Auto-generate DRAFT client invoice from completed milestones ────────────
+
+  async autoGenerateClientDraft(projectId: number, userId: number) {
+    const { clientId, billingMethod, milestones } = await this.getClientEligibleMilestones(projectId);
+
+    if (billingMethod !== BillingMethod.MILESTONE && billingMethod !== BillingMethod.MIXED) {
+      throw new BadRequestException('This project is not billed on a milestone basis');
+    }
+
+    const today = new Date();
+    const due   = new Date(today); due.setDate(due.getDate() + 30);
+
+    const lineItems: any[] = [];
+    for (const m of milestones as any[]) {
+      if (m.amount == null) {
+        throw new BadRequestException(
+          `Milestone "${m.name}" has no contracted amount set. Set an amount on the milestone before generating an invoice.`,
+        );
+      }
+      const price = Number(m.amount);
+      lineItems.push({
+        description: m.name,
+        quantity:    1,
+        unitPrice:   price,
+        amount:      price,
+        lineItemType: 'FIXED' as const,
+        milestoneId: m.id,
+      });
+    }
+
+    if (lineItems.length === 0) {
+      throw new BadRequestException('No eligible completed milestones found to invoice.');
+    }
+
+    const subtotal = lineItems.reduce((s, li) => s + li.amount, 0);
+
+    return this.prisma.invoice.create({
+      data: {
+        invoiceType: 'CLIENT',
+        status:      'DRAFT',
+        triggerType: 'MILESTONE',
+        invoiceDate: today,
+        dueDate:     due,
+        subtotal,
+        taxRate:     0,
+        taxAmount:   0,
+        total:       subtotal,
+        clientId,
+        projectId,
         createdById: userId,
         version:     1,
         lineItems: { create: lineItems },

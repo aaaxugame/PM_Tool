@@ -40,9 +40,16 @@ const QUOTE_STATUS_COLORS: Record<QuoteStatus, string> = {
   PENDING: 'bg-gray-100 text-gray-600', SUBMITTED: 'bg-yellow-50 text-yellow-700',
   APPROVED: 'bg-green-50 text-green-700', REJECTED: 'bg-red-50 text-red-600',
 }
+const PROPOSAL_STATUS_COLORS: Record<string, string> = {
+  DRAFT: 'bg-gray-100 text-gray-600',
+  SENT: 'bg-yellow-50 text-yellow-700',
+  APPROVED: 'bg-green-50 text-green-700',
+  DECLINED: 'bg-red-50 text-red-600',
+  REVISION_REQUESTED: 'bg-orange-50 text-orange-700',
+}
 
 // ── Empty forms ──────────────────────────────────────────────────────────────
-const MILESTONE_EMPTY = { name: '', description: '', dueDate: '', status: 'PENDING' as MilestoneStatus, triggersInvoice: false }
+const MILESTONE_EMPTY = { name: '', description: '', dueDate: '', status: 'PENDING' as MilestoneStatus, triggersInvoice: false, amount: '' }
 const QUOTE_EMPTY = {
   vendorId: 0, quotedPrice: '', estimatedHours: '', hourlyRate: '',
   paymentMode: 'TASK' as PaymentMode, peopleCount: '', expiryDate: '',
@@ -58,6 +65,7 @@ export default function ProjectDetailPage() {
   const { t } = useTranslation()
   const { hasRole, user } = useAuth()
   const isVendor = hasRole('CONTRACTOR') || hasRole('VENDOR_CONTACT')
+  const isClient = hasRole('CLIENT')
   const canManage = hasRole('ADMIN') || hasRole('SUPER_ADMIN') || hasRole('ACCOUNT_MANAGER') || hasRole('PROJECT_MANAGER')
   const projectId = Number(id)
 
@@ -92,6 +100,12 @@ export default function ProjectDetailPage() {
   const [bForm, setBForm] = useState<typeof BUDGET_EMPTY>(BUDGET_EMPTY)
   const [bSaving, setBSaving] = useState(false)
 
+  // Proposal workflow
+  const [proposalActing, setProposalActing] = useState(false)
+  const [proposalError, setProposalError] = useState<string | null>(null)
+  const [proposalNoteModal, setProposalNoteModal] = useState<null | 'decline' | 'revision'>(null)
+  const [proposalNote, setProposalNote] = useState('')
+
   // ── Loaders ──────────────────────────────────────────────────────────────
   const loadProject = () => projectsApi.get(projectId).then(r => setProject(r.data))
   const loadTasks = () => tasksApi.list({ projectId }).then(r => setTasks(r.data))
@@ -110,14 +124,15 @@ export default function ProjectDetailPage() {
   // ── Milestone handlers ───────────────────────────────────────────────────
   const openMCreate = () => { setMForm(MILESTONE_EMPTY); setMModal('create') }
   const openMEdit = (m: Milestone) => {
-    setMForm({ name: m.name, description: m.description ?? '', dueDate: m.dueDate ? m.dueDate.slice(0, 10) : '', status: m.status, triggersInvoice: m.triggersInvoice })
+    setMForm({ name: m.name, description: m.description ?? '', dueDate: m.dueDate ? m.dueDate.slice(0, 10) : '', status: m.status, triggersInvoice: m.triggersInvoice, amount: m.amount ?? '' })
     setMModal(m)
   }
   const setM = (k: string, v: unknown) => setMForm(p => ({ ...p, [k]: v }))
   const handleMSave = async () => {
     setMSaving(true)
     try {
-      const payload = Object.fromEntries(Object.entries(mForm).filter(([, v]) => v !== '' && v !== undefined))
+      const payload: Record<string, unknown> = Object.fromEntries(Object.entries(mForm).filter(([, v]) => v !== '' && v !== undefined))
+      if (project?.proposalStatus === 'APPROVED' && project.clientId) delete payload.amount
       if (mModal === 'create') await milestonesApi.create(projectId, payload)
       else await milestonesApi.update(projectId, (mModal as Milestone).id, payload)
       await loadProject(); setMModal(null)
@@ -207,6 +222,37 @@ export default function ProjectDetailPage() {
     await budgetsApi.remove(bid); loadBudgets()
   }
 
+  // ── Proposal handlers ────────────────────────────────────────────────────
+  const handleSendProposal = async () => {
+    setProposalActing(true); setProposalError(null)
+    try {
+      await projectsApi.sendProposal(projectId)
+      await loadProject()
+    } catch (e: any) {
+      setProposalError(e?.response?.data?.message ?? 'Failed to send proposal')
+    } finally { setProposalActing(false) }
+  }
+  const handleApproveProposal = async () => {
+    setProposalActing(true)
+    try { await projectsApi.approveProposal(projectId); await loadProject() }
+    finally { setProposalActing(false) }
+  }
+  const handleReviseProposal = async () => {
+    setProposalActing(true)
+    try { await projectsApi.reviseProposal(projectId); await loadProject() }
+    finally { setProposalActing(false) }
+  }
+  const handleProposalNoteSubmit = async () => {
+    if (!proposalNote.trim()) return
+    setProposalActing(true)
+    try {
+      if (proposalNoteModal === 'decline') await projectsApi.declineProposal(projectId, proposalNote)
+      else await projectsApi.requestProposalRevision(projectId, proposalNote)
+      await loadProject()
+      setProposalNoteModal(null); setProposalNote('')
+    } finally { setProposalActing(false) }
+  }
+
   // ── Derived values ───────────────────────────────────────────────────────
   const totalBudget = budgets.reduce((s, b) => s + parseFloat(b.amount), 0)
   const approvedQuoteTotal = quotes.filter(q => q.status === 'APPROVED').reduce((s, q) => s + parseFloat(q.quotedPrice), 0)
@@ -222,10 +268,12 @@ export default function ProjectDetailPage() {
     || (hasRole('TEAM_MEMBER') && members.some(m => m.userId === user?.id))
     || (isVendor && !!user?.vendor && project.assignedVendorId === user.vendor.id)
 
+  const proposalApproved = project.proposalStatus === 'APPROVED' && !!project.clientId
+
   const TABS: { key: ActiveTab; label: string }[] = [
     { key: 'work', label: `Work (${project.milestones.length}M · ${tasks.length}T)` },
-    ...(project.projectType === 'VENDOR' ? [{ key: 'quotes' as ActiveTab, label: `Quotes (${quotes.length})` }] : []),
-    { key: 'budget', label: `Budget (${budgets.length})` },
+    ...(project.projectType === 'VENDOR' && !isClient ? [{ key: 'quotes' as ActiveTab, label: `Quotes (${quotes.length})` }] : []),
+    ...(!isClient ? [{ key: 'budget' as ActiveTab, label: `Budget (${budgets.length})` }] : []),
     { key: 'documents', label: 'Documents' },
   ]
 
@@ -272,6 +320,60 @@ export default function ProjectDetailPage() {
           </span>
         </div>
       </div>
+
+      {/* Proposal panel — client-facing projects only */}
+      {project.clientId && (
+        <div className="bg-white rounded-xl border border-gray-200 px-5 py-4">
+          <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-semibold text-gray-700">Proposal</h2>
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PROPOSAL_STATUS_COLORS[project.proposalStatus]}`}>
+                {project.proposalStatus.replace(/_/g, ' ')}
+              </span>
+              <span className="text-xs text-gray-400">v{project.proposalVersion}</span>
+            </div>
+            <div className="flex gap-2">
+              {canManage && project.proposalStatus === 'DRAFT' && (
+                <button onClick={handleSendProposal} disabled={proposalActing}
+                  className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-blue-700 disabled:opacity-50">
+                  {proposalActing ? 'Sending…' : 'Send Proposal'}
+                </button>
+              )}
+              {canManage && ['APPROVED', 'DECLINED', 'REVISION_REQUESTED'].includes(project.proposalStatus) && (
+                <button onClick={handleReviseProposal} disabled={proposalActing}
+                  className="border border-gray-300 text-gray-700 text-xs px-3 py-1.5 rounded-lg hover:bg-gray-50 disabled:opacity-50">
+                  Start New Revision
+                </button>
+              )}
+              {isClient && project.proposalStatus === 'SENT' && (
+                <>
+                  <button onClick={handleApproveProposal} disabled={proposalActing}
+                    className="bg-teal-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-teal-700 disabled:opacity-50">
+                    Approve
+                  </button>
+                  <button onClick={() => setProposalNoteModal('revision')} disabled={proposalActing}
+                    className="border border-yellow-300 text-yellow-700 text-xs px-3 py-1.5 rounded-lg hover:bg-yellow-50 disabled:opacity-50">
+                    Request Revision
+                  </button>
+                  <button onClick={() => setProposalNoteModal('decline')} disabled={proposalActing}
+                    className="border border-red-300 text-red-600 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 disabled:opacity-50">
+                    Decline
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+          {proposalError && (
+            <div className="mb-2 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600">{proposalError}</div>
+          )}
+          {(project.proposalStatus === 'DECLINED' || project.proposalStatus === 'REVISION_REQUESTED') && project.proposalRevisionNote && (
+            <div className={`px-3 py-2 rounded-lg text-xs ${project.proposalStatus === 'DECLINED' ? 'bg-red-50 border border-red-200 text-red-600' : 'bg-yellow-50 border border-yellow-200 text-yellow-700'}`}>
+              <span className="font-medium">{project.proposalStatus === 'DECLINED' ? 'Decline reason: ' : 'Revision requested: '}</span>
+              {project.proposalRevisionNote}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Team Members panel — INTERNAL projects only */}
       {project.projectType === 'INTERNAL' && (
@@ -629,6 +731,23 @@ export default function ProjectDetailPage() {
               <input type="checkbox" checked={mForm.triggersInvoice} onChange={e => setM('triggersInvoice', e.target.checked)} />
               Triggers Invoice when completed
             </label>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Contracted Amount ($){(project.billingMethod === 'MILESTONE' || project.billingMethod === 'MIXED') && ' *'}
+              </label>
+              <input
+                type="number" min="0" step="0.01" value={mForm.amount}
+                onChange={e => setM('amount', e.target.value)}
+                disabled={proposalApproved}
+                placeholder="Amount billed when this milestone is completed"
+                className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  proposalApproved ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-300'
+                }`}
+              />
+              {proposalApproved && (
+                <p className="text-xs text-amber-600 mt-1">Locked — proposal approved. Start a new revision to change this.</p>
+              )}
+            </div>
           </div>
           <div className="flex justify-end gap-2 mt-5">
             <button onClick={() => setMModal(null)} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">{t('common.cancel')}</button>
@@ -765,6 +884,36 @@ export default function ProjectDetailPage() {
             <button onClick={handleBSave} disabled={bSaving || !bForm.amount}
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
               {bSaving ? t('common.loading') : t('common.save')}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── PROPOSAL NOTE MODAL (decline / request revision) ── */}
+      {proposalNoteModal !== null && (
+        <Modal
+          title={proposalNoteModal === 'decline' ? 'Decline Proposal' : 'Request Revision'}
+          onClose={() => { setProposalNoteModal(null); setProposalNote('') }}
+        >
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              {proposalNoteModal === 'decline' ? 'Decline Reason *' : 'Revision Notes *'}
+            </label>
+            <textarea
+              value={proposalNote}
+              onChange={e => setProposalNote(e.target.value)}
+              rows={3}
+              placeholder={proposalNoteModal === 'decline' ? 'Explain what needs to change…' : 'Describe what needs to be revised…'}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex justify-end gap-2 mt-5">
+            <button onClick={() => { setProposalNoteModal(null); setProposalNote('') }} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+              {t('common.cancel')}
+            </button>
+            <button onClick={handleProposalNoteSubmit} disabled={proposalActing || !proposalNote.trim()}
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              {proposalActing ? 'Submitting…' : 'Submit'}
             </button>
           </div>
         </Modal>

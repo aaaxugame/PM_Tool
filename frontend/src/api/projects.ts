@@ -7,6 +7,7 @@ export type ProjectPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT'
 export type ProjectApproval = 'PENDING' | 'APPROVED' | 'REJECTED'
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH'
 export type ProjectType = 'INTERNAL' | 'VENDOR'
+export type ProposalStatus = 'DRAFT' | 'SENT' | 'APPROVED' | 'DECLINED' | 'REVISION_REQUESTED'
 
 export interface ProjectMember {
   id: number
@@ -37,9 +38,15 @@ export interface Project {
   requiredSkillSet: string | null
   proposedCost: string | null
   estimatedHours: string | null
+  hourlyRate: string | null
   proposedWorkers: number | null
   requestingVendorId: number | null
   assignedVendorId: number | null
+  proposalStatus: ProposalStatus
+  proposalVersion: number
+  proposalSentAt: string | null
+  proposalRespondedAt: string | null
+  proposalRevisionNote: string | null
   client: { id: number; name: string; currency: string } | null
   createdBy: { id: number; name: string }
   requestingVendor: { id: number; name: string } | null
@@ -62,6 +69,7 @@ export interface Milestone {
   status: MilestoneStatus
   triggersInvoice: boolean
   completedAt: string | null
+  amount: string | null
   createdAt: string
   projectId: number
 }
@@ -95,6 +103,12 @@ export const projectsApi = {
   create: (data: Record<string, unknown>) => api.post<Project>('/projects', data),
   update: (id: number, data: Record<string, unknown>) => api.patch<Project>(`/projects/${id}`, data),
   remove: (id: number) => api.delete(`/projects/${id}`),
+  sendProposal: (id: number) => api.post<Project>(`/projects/${id}/proposal/send`, {}),
+  approveProposal: (id: number) => api.post<Project>(`/projects/${id}/proposal/approve`, {}),
+  declineProposal: (id: number, note: string) => api.post<Project>(`/projects/${id}/proposal/decline`, { note }),
+  requestProposalRevision: (id: number, note: string) =>
+    api.post<Project>(`/projects/${id}/proposal/request-revision`, { note }),
+  reviseProposal: (id: number) => api.post<Project>(`/projects/${id}/proposal/revise`, {}),
 }
 
 export const projectMembersApi = {

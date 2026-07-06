@@ -177,7 +177,29 @@
     "priority_LOW": "Low",
     "priority_MEDIUM": "Medium",
     "priority_HIGH": "High",
-    "priority_URGENT": "Urgent"
+    "priority_URGENT": "Urgent",
+    "hourlyRate": "Hourly Rate",
+    "milestoneAmount": "Contracted Amount"
+  },
+  "proposals": {
+    "sendProposal": "Send Proposal",
+    "startRevision": "Start New Revision",
+    "approve": "Approve Proposal",
+    "decline": "Decline Proposal",
+    "requestRevision": "Request Revision",
+    "declineReason": "Decline Reason",
+    "declineReasonPlaceholder": "Explain what needs to change…",
+    "revisionNotePlaceholder": "Describe what needs to be revised…",
+    "hourlyRateRequired": "An hourly rate is required before sending a proposal for Time & Materials or Mixed billing.",
+    "lockedNotice": "Terms are locked because this proposal has been approved. Start a new revision to make changes.",
+    "version": "Version",
+    "status": {
+      "DRAFT": "Draft",
+      "SENT": "Awaiting Client Review",
+      "APPROVED": "Approved",
+      "DECLINED": "Declined",
+      "REVISION_REQUESTED": "Revision Requested"
+    }
   },
   "quotes": {
     "title": "Quotes & Budgets",

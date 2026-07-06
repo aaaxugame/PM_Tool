@@ -177,7 +177,29 @@
     "priority_LOW": "低",
     "priority_MEDIUM": "中",
     "priority_HIGH": "高",
-    "priority_URGENT": "紧急"
+    "priority_URGENT": "紧急",
+    "hourlyRate": "时薪",
+    "milestoneAmount": "合同金额"
+  },
+  "proposals": {
+    "sendProposal": "发送提案",
+    "startRevision": "开始新修订",
+    "approve": "批准提案",
+    "decline": "拒绝提案",
+    "requestRevision": "请求修订",
+    "declineReason": "拒绝原因",
+    "declineReasonPlaceholder": "说明需要修改的内容…",
+    "revisionNotePlaceholder": "描述需要修订的内容…",
+    "hourlyRateRequired": "按工时与材料或混合计费方式发送提案前，必须设置时薪。",
+    "lockedNotice": "该提案已获批准，条款已锁定。请先开始新修订才能修改。",
+    "version": "版本",
+    "status": {
+      "DRAFT": "草稿",
+      "SENT": "待客户审核",
+      "APPROVED": "已批准",
+      "DECLINED": "已拒绝",
+      "REVISION_REQUESTED": "已请求修订"
+    }
   },
   "quotes": {
     "title": "报价与预算",

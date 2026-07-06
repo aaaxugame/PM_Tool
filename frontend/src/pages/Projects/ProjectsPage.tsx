@@ -368,9 +368,11 @@ function ProjectCreationModal({
     endDate: project?.endDate ? project.endDate.slice(0, 10) : '',
     proposedCost: project?.proposedCost ?? '',
     estimatedHours: project?.estimatedHours ?? '',
+    hourlyRate: project?.hourlyRate ?? '',
     proposedWorkers: project?.proposedWorkers?.toString() ?? '',
     requiredSkillSet: project?.requiredSkillSet ?? '',
   })
+  const proposalApproved = project?.proposalStatus === 'APPROVED' && !!project.clientId
   const [selectedMembers, setSelectedMembers] = useState<number[]>(
     project?.members?.map(m => m.userId) ?? []
   )
@@ -398,8 +400,15 @@ function ProjectCreationModal({
         endDate: form.endDate || undefined,
         proposedCost: form.proposedCost || undefined,
         estimatedHours: form.estimatedHours || undefined,
+        hourlyRate: form.hourlyRate || undefined,
         proposedWorkers: form.proposedWorkers ? parseInt(form.proposedWorkers) : undefined,
         requiredSkillSet: form.requiredSkillSet || undefined,
+      }
+      if (proposalApproved) {
+        delete payload.billingMethod
+        delete payload.proposedCost
+        delete payload.estimatedHours
+        delete payload.hourlyRate
       }
       if (form.projectType === 'VENDOR') {
         payload.assignedVendorId = form.assignedVendorId || undefined
@@ -556,10 +565,20 @@ function ProjectCreationModal({
         {/* Financial */}
         <div>
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Financial</h3>
+          {proposalApproved && (
+            <div className="mb-3 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-700">
+              Locked — proposal approved. Start a new revision to change these terms.
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Billing Model *</label>
-              <select value={form.billingMethod} onChange={e => set('billingMethod', e.target.value)} className={inp}>
+              <select
+                value={form.billingMethod}
+                onChange={e => set('billingMethod', e.target.value)}
+                disabled={proposalApproved}
+                className={proposalApproved ? `${inp} bg-gray-50 text-gray-400 cursor-not-allowed` : inp}
+              >
                 {(['TIME_AND_MATERIALS', 'FIXED', 'MILESTONE', 'MIXED'] as BillingMethod[]).map(m => (
                   <option key={m} value={m}>{m.replace(/_/g, ' ')}</option>
                 ))}
@@ -567,12 +586,33 @@ function ProjectCreationModal({
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Estimated Cost ($)</label>
-              <input type="number" min="0" step="0.01" value={form.proposedCost} onChange={e => set('proposedCost', e.target.value)} className={inp} />
+              <input
+                type="number" min="0" step="0.01" value={form.proposedCost}
+                onChange={e => set('proposedCost', e.target.value)}
+                disabled={proposalApproved}
+                className={proposalApproved ? `${inp} bg-gray-50 text-gray-400 cursor-not-allowed` : inp}
+              />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Estimated Hours</label>
-              <input type="number" min="0" step="0.5" value={form.estimatedHours} onChange={e => set('estimatedHours', e.target.value)} className={inp} />
+              <input
+                type="number" min="0" step="0.5" value={form.estimatedHours}
+                onChange={e => set('estimatedHours', e.target.value)}
+                disabled={proposalApproved}
+                className={proposalApproved ? `${inp} bg-gray-50 text-gray-400 cursor-not-allowed` : inp}
+              />
             </div>
+            {(form.billingMethod === 'TIME_AND_MATERIALS' || form.billingMethod === 'MIXED') && (
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Hourly Rate ($) *</label>
+                <input
+                  type="number" min="0" step="0.01" value={form.hourlyRate}
+                  onChange={e => set('hourlyRate', e.target.value)}
+                  disabled={proposalApproved}
+                  className={proposalApproved ? `${inp} bg-gray-50 text-gray-400 cursor-not-allowed` : inp}
+                />
+              </div>
+            )}
           </div>
         </div>
 
