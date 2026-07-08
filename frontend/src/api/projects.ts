@@ -8,6 +8,7 @@ export type ProjectApproval = 'PENDING' | 'APPROVED' | 'REJECTED'
 export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH'
 export type ProjectType = 'INTERNAL' | 'VENDOR'
 export type ProposalStatus = 'DRAFT' | 'SENT' | 'APPROVED' | 'DECLINED' | 'REVISION_REQUESTED'
+export type ProposalVersionStatus = 'SENT' | 'APPROVED' | 'DECLINED' | 'REVISION_REQUESTED'
 
 export interface ProjectMember {
   id: number
@@ -58,7 +59,63 @@ export interface Project {
 
 export interface ProjectDetail extends Project {
   milestones: Milestone[]
+  proposalVersions: ProposalVersion[]
+  changeRequests: ChangeRequest[]
   _count: { tasks: number; timeEntries: number }
+}
+
+export type ChangeRequestStatus = 'SENT' | 'APPROVED' | 'DECLINED' | 'REVISION_REQUESTED'
+
+export interface ChangeRequestMilestone {
+  name: string
+  description: string | null
+  dueDate: string | null
+  amount: number
+}
+
+export interface ChangeRequest {
+  id: number
+  title: string
+  description: string | null
+  costDelta: string
+  milestones: ChangeRequestMilestone[]
+  status: ChangeRequestStatus
+  sentAt: string
+  respondedAt: string | null
+  responseNote: string | null
+  requestedBy: { id: number; name: string }
+  respondedBy: { id: number; name: string } | null
+  createdMilestones: Milestone[]
+  supersedesId: number | null
+}
+
+export interface ProposalVersionSnapshot {
+  description: string | null
+  billingMethod: BillingMethod
+  proposedCost: string | null
+  hourlyRate: string | null
+  estimatedHours: string | null
+  currency: string
+  milestones: {
+    id: number
+    name: string
+    description: string | null
+    dueDate: string | null
+    amount: string | null
+    triggersInvoice: boolean
+  }[]
+}
+
+export interface ProposalVersion {
+  id: number
+  version: number
+  status: ProposalVersionStatus
+  snapshot: ProposalVersionSnapshot
+  sentAt: string
+  sentBy: { id: number; name: string }
+  respondedAt: string | null
+  respondedBy: { id: number; name: string } | null
+  responseNote: string | null
 }
 
 export interface Milestone {
@@ -127,4 +184,16 @@ export const milestonesApi = {
     api.patch<Milestone>(`/projects/${projectId}/milestones/${id}`, data),
   remove: (projectId: number, id: number) =>
     api.delete(`/projects/${projectId}/milestones/${id}`),
+}
+
+export const changeRequestsApi = {
+  list: (projectId: number) => api.get<ChangeRequest[]>(`/projects/${projectId}/change-requests`),
+  create: (projectId: number, data: Record<string, unknown>) =>
+    api.post<ChangeRequest>(`/projects/${projectId}/change-requests`, data),
+  approve: (projectId: number, id: number) =>
+    api.post<ChangeRequest>(`/projects/${projectId}/change-requests/${id}/approve`, {}),
+  decline: (projectId: number, id: number, note: string) =>
+    api.post<ChangeRequest>(`/projects/${projectId}/change-requests/${id}/decline`, { note }),
+  requestRevision: (projectId: number, id: number, note: string) =>
+    api.post<ChangeRequest>(`/projects/${projectId}/change-requests/${id}/request-revision`, { note }),
 }

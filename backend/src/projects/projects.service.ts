@@ -11,7 +11,7 @@ export interface RequestUser {
   client: { id: number } | null;
 }
 
-const MANAGER_ROLES = ['SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER'];
+export const MANAGER_ROLES = ['SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER'];
 
 const PROPOSAL_TRANSITIONS: Partial<Record<string, string[]>> = {
   DRAFT:               ['SENT'],
@@ -22,6 +22,8 @@ const PROPOSAL_TRANSITIONS: Partial<Record<string, string[]>> = {
 };
 
 const LOCKED_PROPOSAL_FIELDS = ['hourlyRate', 'proposedCost', 'billingMethod', 'estimatedHours'];
+
+export const LOCKED_MILESTONE_FIELDS = ['name', 'dueDate', 'amount'];
 
 const PROJECT_INCLUDE = {
   client: { select: { id: true, name: true, currency: true } },
@@ -157,6 +159,21 @@ export class ProjectsService {
         assignments: { include: { user: { select: { id: true, name: true } } } },
         members: { include: { user: { select: { id: true, name: true, email: true } } }, orderBy: { createdAt: 'asc' } },
         milestones: { orderBy: { dueDate: 'asc' } },
+        proposalVersions: {
+          orderBy: { version: 'desc' },
+          include: {
+            sentBy: { select: { id: true, name: true } },
+            respondedBy: { select: { id: true, name: true } },
+          },
+        },
+        changeRequests: {
+          orderBy: { sentAt: 'desc' },
+          include: {
+            requestedBy: { select: { id: true, name: true } },
+            respondedBy: { select: { id: true, name: true } },
+            createdMilestones: true,
+          },
+        },
         _count: { select: { tasks: true, timeEntries: true } },
       },
     });
@@ -308,7 +325,26 @@ export class ProjectsService {
 
   // ── Client Proposal workflow ──────────────────────────────────────────────
 
-  async sendProposal(id: number) {
+  private buildProposalSnapshot(project: any) {
+    return {
+      description: project.description ?? null,
+      billingMethod: project.billingMethod,
+      proposedCost: project.proposedCost != null ? project.proposedCost.toString() : null,
+      hourlyRate: project.hourlyRate != null ? project.hourlyRate.toString() : null,
+      estimatedHours: project.estimatedHours != null ? project.estimatedHours.toString() : null,
+      currency: project.client?.currency ?? 'USD',
+      milestones: (project.milestones ?? []).map((m: any) => ({
+        id: m.id,
+        name: m.name,
+        description: m.description ?? null,
+        dueDate: m.dueDate ? m.dueDate.toISOString() : null,
+        amount: m.amount != null ? m.amount.toString() : null,
+        triggersInvoice: m.triggersInvoice,
+      })),
+    };
+  }
+
+  async sendProposal(id: number, userId: number) {
     const project = await this.findOne(id);
     if (!project.clientId) {
       throw new BadRequestException('This project has no client — the proposal workflow only applies to client-facing projects');
@@ -323,11 +359,23 @@ export class ProjectsService {
       );
     }
 
-    const updated = await this.prisma.project.update({
-      where: { id },
-      data: { proposalStatus: 'SENT', proposalSentAt: new Date() } as any,
-      include: PROJECT_INCLUDE,
-    });
+    const snapshot = this.buildProposalSnapshot(project);
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.project.update({
+        where: { id },
+        data: { proposalStatus: 'SENT', proposalSentAt: new Date() } as any,
+        include: PROJECT_INCLUDE,
+      }),
+      this.prisma.proposalVersion.create({
+        data: {
+          projectId: id,
+          version: (project as any).proposalVersion,
+          snapshot,
+          status: 'SENT',
+          sentById: userId,
+        },
+      }),
+    ]);
 
     const client = await this.prisma.client.findUnique({
       where: { id: project.clientId! },
@@ -350,7 +398,7 @@ export class ProjectsService {
     return updated;
   }
 
-  async approveProposal(id: number, userRoles: string[], userClientId?: number) {
+  async approveProposal(id: number, userRoles: string[], userClientId: number | undefined, userId: number) {
     const project = await this.findOne(id);
     const isInternalApprover = userRoles.some(r => MANAGER_ROLES.includes(r));
     const isMatchingClient = userRoles.includes('CLIENT') && userClientId === project.clientId;
@@ -363,10 +411,17 @@ export class ProjectsService {
 
     const data: any = { proposalStatus: 'APPROVED', proposalRespondedAt: new Date() };
     if (project.status === 'DRAFT') data.status = 'ACTIVE';
-    return this.prisma.project.update({ where: { id }, data, include: PROJECT_INCLUDE });
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.project.update({ where: { id }, data, include: PROJECT_INCLUDE }),
+      this.prisma.proposalVersion.update({
+        where: { projectId_version: { projectId: id, version: (project as any).proposalVersion } },
+        data: { status: 'APPROVED', respondedAt: new Date(), respondedById: userId },
+      }),
+    ]);
+    return updated;
   }
 
-  async declineProposal(id: number, note: string, userRoles: string[], userClientId?: number) {
+  async declineProposal(id: number, note: string, userRoles: string[], userClientId: number | undefined, userId: number) {
     if (!note?.trim()) throw new BadRequestException('A decline reason is required');
     const project = await this.findOne(id);
     const isInternalApprover = userRoles.some(r => MANAGER_ROLES.includes(r));
@@ -377,14 +432,21 @@ export class ProjectsService {
     if ((project as any).proposalStatus !== 'SENT') {
       throw new BadRequestException(`Cannot decline proposal in ${(project as any).proposalStatus} status`);
     }
-    return this.prisma.project.update({
-      where: { id },
-      data: { proposalStatus: 'DECLINED', proposalRespondedAt: new Date(), proposalRevisionNote: note } as any,
-      include: PROJECT_INCLUDE,
-    });
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.project.update({
+        where: { id },
+        data: { proposalStatus: 'DECLINED', proposalRespondedAt: new Date(), proposalRevisionNote: note } as any,
+        include: PROJECT_INCLUDE,
+      }),
+      this.prisma.proposalVersion.update({
+        where: { projectId_version: { projectId: id, version: (project as any).proposalVersion } },
+        data: { status: 'DECLINED', respondedAt: new Date(), respondedById: userId, responseNote: note },
+      }),
+    ]);
+    return updated;
   }
 
-  async requestProposalRevision(id: number, note: string, userRoles: string[], userClientId?: number) {
+  async requestProposalRevision(id: number, note: string, userRoles: string[], userClientId: number | undefined, userId: number) {
     if (!note?.trim()) throw new BadRequestException('Revision instructions are required');
     const project = await this.findOne(id);
     const isInternalApprover = userRoles.some(r => MANAGER_ROLES.includes(r));
@@ -395,11 +457,18 @@ export class ProjectsService {
     if ((project as any).proposalStatus !== 'SENT') {
       throw new BadRequestException(`Cannot request revision on proposal in ${(project as any).proposalStatus} status`);
     }
-    return this.prisma.project.update({
-      where: { id },
-      data: { proposalStatus: 'REVISION_REQUESTED', proposalRespondedAt: new Date(), proposalRevisionNote: note } as any,
-      include: PROJECT_INCLUDE,
-    });
+    const [updated] = await this.prisma.$transaction([
+      this.prisma.project.update({
+        where: { id },
+        data: { proposalStatus: 'REVISION_REQUESTED', proposalRespondedAt: new Date(), proposalRevisionNote: note } as any,
+        include: PROJECT_INCLUDE,
+      }),
+      this.prisma.proposalVersion.update({
+        where: { projectId_version: { projectId: id, version: (project as any).proposalVersion } },
+        data: { status: 'REVISION_REQUESTED', respondedAt: new Date(), respondedById: userId, responseNote: note },
+      }),
+    ]);
+    return updated;
   }
 
   async reviseProposal(id: number) {

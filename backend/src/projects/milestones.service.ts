@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateMilestoneDto } from './dto/create-milestone.dto';
 import { UpdateMilestoneDto } from './dto/update-milestone.dto';
+import { LOCKED_MILESTONE_FIELDS } from './projects.service';
 
 @Injectable()
 export class MilestonesService {
@@ -34,14 +35,15 @@ export class MilestonesService {
   async update(projectId: number, id: number, dto: UpdateMilestoneDto) {
     await this.findOne(projectId, id);
 
-    if (dto.amount !== undefined) {
+    const touchesLockedField = LOCKED_MILESTONE_FIELDS.some(f => (dto as any)[f] !== undefined);
+    if (touchesLockedField) {
       const project = await this.prisma.project.findUnique({
         where: { id: projectId },
         select: { proposalStatus: true, clientId: true },
       });
       if (project?.clientId && project.proposalStatus === 'APPROVED') {
         throw new BadRequestException(
-          'Cannot change the contracted amount on an approved proposal. Start a new proposal revision first.',
+          'Cannot change milestone terms on an approved proposal. Start a new proposal revision first.',
         );
       }
     }

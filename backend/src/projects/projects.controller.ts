@@ -5,6 +5,7 @@ import { Roles } from '../common/decorators/roles.decorator';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
+import { ProposalNoteDto } from './dto/proposal-note.dto';
 import { ProjectStatus } from '@prisma/client';
 
 @Controller('projects')
@@ -111,31 +112,31 @@ export class ProjectsController {
   @Post(':id/proposal/send')
   @UseGuards(RolesGuard)
   @Roles('SUPER_ADMIN', 'ADMIN', 'ACCOUNT_MANAGER', 'PROJECT_MANAGER')
-  sendProposal(@Param('id', ParseIntPipe) id: number) {
-    return this.projectsService.sendProposal(id);
+  sendProposal(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    return this.projectsService.sendProposal(id, req.user.id);
   }
 
   @Post(':id/proposal/approve')
   approveProposal(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
-    return this.projectsService.approveProposal(id, req.user.roles ?? [], req.user.client?.id);
+    return this.projectsService.approveProposal(id, req.user.roles ?? [], req.user.client?.id, req.user.id);
   }
 
   @Post(':id/proposal/decline')
   declineProposal(
     @Param('id', ParseIntPipe) id: number,
-    @Body('note') note: string,
+    @Body() dto: ProposalNoteDto,
     @Req() req: any,
   ) {
-    return this.projectsService.declineProposal(id, note, req.user.roles ?? [], req.user.client?.id);
+    return this.projectsService.declineProposal(id, dto.note, req.user.roles ?? [], req.user.client?.id, req.user.id);
   }
 
   @Post(':id/proposal/request-revision')
   requestProposalRevision(
     @Param('id', ParseIntPipe) id: number,
-    @Body('note') note: string,
+    @Body() dto: ProposalNoteDto,
     @Req() req: any,
   ) {
-    return this.projectsService.requestProposalRevision(id, note, req.user.roles ?? [], req.user.client?.id);
+    return this.projectsService.requestProposalRevision(id, dto.note, req.user.roles ?? [], req.user.client?.id, req.user.id);
   }
 
   @Post(':id/proposal/revise')

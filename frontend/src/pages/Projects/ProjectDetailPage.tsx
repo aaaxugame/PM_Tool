@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useAuth } from '../../store/authContext'
-import { projectsApi, projectMembersApi, milestonesApi, type ProjectDetail, type ProjectMember, type Milestone, type MilestoneStatus, type ProjectPriority } from '../../api/projects'
+import { projectsApi, projectMembersApi, milestonesApi, changeRequestsApi, type ProjectDetail, type ProjectMember, type Milestone, type MilestoneStatus, type ProjectPriority, type ChangeRequest, type ChangeRequestMilestone } from '../../api/projects'
 import { tasksApi, type Task, type TaskStatus } from '../../api/tasks'
 import { usersApi, type SimpleUser } from '../../api/organizations'
 import { vendorQuotesApi, budgetsApi, type VendorQuote, type Budget, type QuoteStatus, type PaymentMode } from '../../api/quotesBudgets'
@@ -56,6 +56,7 @@ const QUOTE_EMPTY = {
   taskId: 0, milestoneId: 0,
 }
 const BUDGET_EMPTY = { amount: '', notes: '', taskId: 0 }
+const CR_FORM_EMPTY = { title: '', description: '', costDelta: '', milestones: [] as { name: string; description: string; dueDate: string; amount: string }[] }
 
 type ActiveTab = 'work' | 'quotes' | 'budget' | 'documents'
 
@@ -105,6 +106,16 @@ export default function ProjectDetailPage() {
   const [proposalError, setProposalError] = useState<string | null>(null)
   const [proposalNoteModal, setProposalNoteModal] = useState<null | 'decline' | 'revision'>(null)
   const [proposalNote, setProposalNote] = useState('')
+  const [historyOpen, setHistoryOpen] = useState(false)
+
+  // Change requests
+  const [crCreateOpen, setCrCreateOpen] = useState(false)
+  const [crForm, setCrForm] = useState<{ title: string; description: string; costDelta: string; milestones: { name: string; description: string; dueDate: string; amount: string }[] }>(CR_FORM_EMPTY)
+  const [crSaving, setCrSaving] = useState(false)
+  const [crError, setCrError] = useState<string | null>(null)
+  const [crActingId, setCrActingId] = useState<number | null>(null)
+  const [crNoteModal, setCrNoteModal] = useState<null | { crId: number; mode: 'decline' | 'revision' }>(null)
+  const [crNote, setCrNote] = useState('')
 
   // ── Loaders ──────────────────────────────────────────────────────────────
   const loadProject = () => projectsApi.get(projectId).then(r => setProject(r.data))
@@ -253,6 +264,47 @@ export default function ProjectDetailPage() {
     } finally { setProposalActing(false) }
   }
 
+  // ── Change request handlers ──────────────────────────────────────────────
+  const openCrCreate = () => { setCrForm(CR_FORM_EMPTY); setCrError(null); setCrCreateOpen(true) }
+  const setCr = (k: string, v: unknown) => setCrForm(p => ({ ...p, [k]: v }))
+  const addCrMilestoneRow = () => setCrForm(p => ({ ...p, milestones: [...p.milestones, { name: '', description: '', dueDate: '', amount: '' }] }))
+  const updateCrMilestoneRow = (idx: number, k: string, v: string) =>
+    setCrForm(p => ({ ...p, milestones: p.milestones.map((m, i) => i === idx ? { ...m, [k]: v } : m) }))
+  const removeCrMilestoneRow = (idx: number) => setCrForm(p => ({ ...p, milestones: p.milestones.filter((_, i) => i !== idx) }))
+  const handleCrSave = async () => {
+    setCrSaving(true); setCrError(null)
+    try {
+      const milestones: ChangeRequestMilestone[] = crForm.milestones
+        .filter(m => m.name.trim())
+        .map(m => ({ name: m.name, description: m.description || null, dueDate: m.dueDate || null, amount: parseFloat(m.amount) || 0 }))
+      await changeRequestsApi.create(projectId, {
+        title: crForm.title,
+        description: crForm.description || undefined,
+        costDelta: parseFloat(crForm.costDelta) || 0,
+        milestones,
+      })
+      await loadProject()
+      setCrCreateOpen(false)
+    } catch (e: any) {
+      setCrError(e?.response?.data?.message ?? 'Failed to create change request')
+    } finally { setCrSaving(false) }
+  }
+  const handleCrApprove = async (cr: ChangeRequest) => {
+    setCrActingId(cr.id)
+    try { await changeRequestsApi.approve(projectId, cr.id); await loadProject() }
+    finally { setCrActingId(null) }
+  }
+  const handleCrNoteSubmit = async () => {
+    if (!crNoteModal || !crNote.trim()) return
+    setCrActingId(crNoteModal.crId)
+    try {
+      if (crNoteModal.mode === 'decline') await changeRequestsApi.decline(projectId, crNoteModal.crId, crNote)
+      else await changeRequestsApi.requestRevision(projectId, crNoteModal.crId, crNote)
+      await loadProject()
+      setCrNoteModal(null); setCrNote('')
+    } finally { setCrActingId(null) }
+  }
+
   // ── Derived values ───────────────────────────────────────────────────────
   const totalBudget = budgets.reduce((s, b) => s + parseFloat(b.amount), 0)
   const approvedQuoteTotal = quotes.filter(q => q.status === 'APPROVED').reduce((s, q) => s + parseFloat(q.quotedPrice), 0)
@@ -331,6 +383,11 @@ export default function ProjectDetailPage() {
                 {project.proposalStatus.replace(/_/g, ' ')}
               </span>
               <span className="text-xs text-gray-400">v{project.proposalVersion}</span>
+              {project.proposalVersions.length > 0 && (
+                <button onClick={() => setHistoryOpen(true)} className="text-xs text-blue-600 hover:underline">
+                  View History
+                </button>
+              )}
             </div>
             <div className="flex gap-2">
               {canManage && project.proposalStatus === 'DRAFT' && (
@@ -372,6 +429,75 @@ export default function ProjectDetailPage() {
               {project.proposalRevisionNote}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Change Requests panel — additional scope after the proposal is approved */}
+      {proposalApproved && (
+        <div className="bg-white rounded-xl border border-gray-200 px-5 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <h2 className="text-sm font-semibold text-gray-700">Change Requests</h2>
+            {canManage && (
+              <button onClick={openCrCreate} className="bg-blue-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-blue-700">
+                + New Change Request
+              </button>
+            )}
+          </div>
+          {project.changeRequests.length === 0 && (
+            <p className="text-xs text-gray-400">No change requests yet.</p>
+          )}
+          <div className="space-y-3">
+            {project.changeRequests.map(cr => (
+              <div key={cr.id} className="border border-gray-200 rounded-lg px-3 py-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-medium text-gray-800">{cr.title}</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PROPOSAL_STATUS_COLORS[cr.status]}`}>
+                      {cr.status.replace(/_/g, ' ')}
+                    </span>
+                    <span className="text-xs text-gray-500 font-mono">+${parseFloat(cr.costDelta).toFixed(2)}</span>
+                  </div>
+                  {isClient && cr.status === 'SENT' && (
+                    <div className="flex gap-2">
+                      <button onClick={() => handleCrApprove(cr)} disabled={crActingId === cr.id}
+                        className="bg-teal-600 text-white text-xs px-3 py-1.5 rounded-lg hover:bg-teal-700 disabled:opacity-50">
+                        Approve
+                      </button>
+                      <button onClick={() => setCrNoteModal({ crId: cr.id, mode: 'revision' })} disabled={crActingId === cr.id}
+                        className="border border-yellow-300 text-yellow-700 text-xs px-3 py-1.5 rounded-lg hover:bg-yellow-50 disabled:opacity-50">
+                        Request Revision
+                      </button>
+                      <button onClick={() => setCrNoteModal({ crId: cr.id, mode: 'decline' })} disabled={crActingId === cr.id}
+                        className="border border-red-300 text-red-600 text-xs px-3 py-1.5 rounded-lg hover:bg-red-50 disabled:opacity-50">
+                        Decline
+                      </button>
+                    </div>
+                  )}
+                </div>
+                {cr.description && <p className="text-xs text-gray-500 mt-1">{cr.description}</p>}
+                <p className="text-xs text-gray-400 mt-1">Requested by {cr.requestedBy.name} on {cr.sentAt.slice(0, 10)}</p>
+                {cr.milestones.length > 0 && (
+                  <ul className="mt-2 space-y-0.5">
+                    {cr.milestones.map((m, i) => (
+                      <li key={i} className="text-xs text-gray-600 flex justify-between">
+                        <span>{m.name}</span>
+                        <span className="font-mono">${m.amount.toFixed(2)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {cr.respondedAt && (
+                  <div className={`mt-2 px-2 py-1.5 rounded text-xs ${
+                    cr.status === 'APPROVED' ? 'bg-green-50 text-green-700' :
+                    cr.status === 'DECLINED' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-700'
+                  }`}>
+                    <span className="font-medium">{cr.status.replace(/_/g, ' ')}</span> by {cr.respondedBy?.name} on {cr.respondedAt.slice(0, 10)}
+                    {cr.responseNote && <p className="mt-1">{cr.responseNote}</p>}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -914,6 +1040,144 @@ export default function ProjectDetailPage() {
             <button onClick={handleProposalNoteSubmit} disabled={proposalActing || !proposalNote.trim()}
               className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
               {proposalActing ? 'Submitting…' : 'Submit'}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── PROPOSAL HISTORY MODAL ── */}
+      {historyOpen && (
+        <Modal title="Proposal History" onClose={() => setHistoryOpen(false)}>
+          <div className="space-y-4">
+            {project.proposalVersions.length === 0 && (
+              <p className="text-sm text-gray-400">No versions have been sent yet.</p>
+            )}
+            {project.proposalVersions.map(v => (
+              <div key={v.id} className="border border-gray-200 rounded-lg px-3 py-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-xs font-semibold text-gray-700">v{v.version}</span>
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PROPOSAL_STATUS_COLORS[v.status]}`}>
+                    {v.status.replace(/_/g, ' ')}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500">
+                  Sent by {v.sentBy.name} on {v.sentAt.slice(0, 10)}
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-600">
+                  <span>Billing: {v.snapshot.billingMethod.replace(/_/g, ' ')}</span>
+                  {v.snapshot.hourlyRate && <span>Rate: ${parseFloat(v.snapshot.hourlyRate).toFixed(2)}/h</span>}
+                  {v.snapshot.proposedCost && <span>Cost: ${parseFloat(v.snapshot.proposedCost).toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>}
+                  {v.snapshot.estimatedHours && <span>Est. hours: {v.snapshot.estimatedHours}</span>}
+                </div>
+                {v.snapshot.milestones.length > 0 && (
+                  <div className="mt-2">
+                    <p className="text-xs font-medium text-gray-500 mb-1">Milestones at time of sending</p>
+                    <ul className="space-y-0.5">
+                      {v.snapshot.milestones.map(m => (
+                        <li key={m.id} className="text-xs text-gray-600 flex justify-between">
+                          <span>{m.name}</span>
+                          <span className="font-mono">{m.amount ? `$${parseFloat(m.amount).toFixed(2)}` : '—'}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {v.respondedAt ? (
+                  <div className={`mt-2 px-2 py-1.5 rounded text-xs ${
+                    v.status === 'APPROVED' ? 'bg-green-50 text-green-700' :
+                    v.status === 'DECLINED' ? 'bg-red-50 text-red-600' : 'bg-yellow-50 text-yellow-700'
+                  }`}>
+                    <span className="font-medium">{v.status.replace(/_/g, ' ')}</span> by {v.respondedBy?.name} on {v.respondedAt.slice(0, 10)}
+                    {v.responseNote && <p className="mt-1">{v.responseNote}</p>}
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-gray-400 italic">Awaiting response</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </Modal>
+      )}
+
+      {/* ── NEW CHANGE REQUEST MODAL ── */}
+      {crCreateOpen && (
+        <Modal title="New Change Request" onClose={() => setCrCreateOpen(false)}>
+          <div className="space-y-3">
+            {crError && (
+              <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600">{crError}</div>
+            )}
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Title *</label>
+              <input value={crForm.title} onChange={e => setCr('title', e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+              <textarea value={crForm.description} onChange={e => setCr('description', e.target.value)} rows={2}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Additional Cost *</label>
+              <input type="number" min="0" step="0.01" value={crForm.costDelta} onChange={e => setCr('costDelta', e.target.value)}
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+            </div>
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="block text-xs font-medium text-gray-600">Milestones (optional)</label>
+                <button onClick={addCrMilestoneRow} className="text-xs text-blue-600 hover:underline">+ Add milestone</button>
+              </div>
+              <div className="space-y-2">
+                {crForm.milestones.map((m, i) => (
+                  <div key={i} className="flex gap-2 items-start">
+                    <input value={m.name} onChange={e => updateCrMilestoneRow(i, 'name', e.target.value)} placeholder="Name"
+                      className="flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-xs" />
+                    <input type="date" value={m.dueDate} onChange={e => updateCrMilestoneRow(i, 'dueDate', e.target.value)}
+                      className="border border-gray-300 rounded-lg px-2 py-1.5 text-xs" />
+                    <input type="number" min="0" step="0.01" value={m.amount} onChange={e => updateCrMilestoneRow(i, 'amount', e.target.value)} placeholder="Amount"
+                      className="w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-xs" />
+                    <button onClick={() => removeCrMilestoneRow(i)} className="text-xs text-red-500 hover:underline px-1">Remove</button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-5">
+            <button onClick={() => setCrCreateOpen(false)} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+              {t('common.cancel')}
+            </button>
+            <button onClick={handleCrSave} disabled={crSaving || !crForm.title.trim() || !crForm.costDelta}
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              {crSaving ? 'Sending…' : 'Send Change Request'}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── CHANGE REQUEST NOTE MODAL (decline / request revision) ── */}
+      {crNoteModal !== null && (
+        <Modal
+          title={crNoteModal.mode === 'decline' ? 'Decline Change Request' : 'Request Revision'}
+          onClose={() => { setCrNoteModal(null); setCrNote('') }}
+        >
+          <div>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              {crNoteModal.mode === 'decline' ? 'Decline Reason *' : 'Revision Notes *'}
+            </label>
+            <textarea
+              value={crNote}
+              onChange={e => setCrNote(e.target.value)}
+              rows={3}
+              placeholder={crNoteModal.mode === 'decline' ? 'Explain what needs to change…' : 'Describe what needs to be revised…'}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div className="flex justify-end gap-2 mt-5">
+            <button onClick={() => { setCrNoteModal(null); setCrNote('') }} className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+              {t('common.cancel')}
+            </button>
+            <button onClick={handleCrNoteSubmit} disabled={crActingId === crNoteModal.crId || !crNote.trim()}
+              className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
+              {crActingId === crNoteModal.crId ? 'Submitting…' : 'Submit'}
             </button>
           </div>
         </Modal>

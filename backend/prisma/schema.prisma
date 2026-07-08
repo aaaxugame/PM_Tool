@@ -44,6 +44,10 @@ model User {
   billingRates               BillingRate[]
   approvedInvoices           Invoice[]    @relation("InvoiceApprovedBy")
   documents                  Document[]
+  sentProposalVersions       ProposalVersion[] @relation("ProposalVersionSentBy")
+  respondedProposalVersions  ProposalVersion[] @relation("ProposalVersionRespondedBy")
+  requestedChangeRequests    ChangeRequest[] @relation("ChangeRequestRequestedBy")
+  respondedChangeRequests    ChangeRequest[] @relation("ChangeRequestRespondedBy")
 
   @@map("users")
 }
@@ -172,6 +176,8 @@ model Project {
   invoices      Invoice[]
   billingRates  BillingRate[]
   documents     Document[]
+  proposalVersions ProposalVersion[]
+  changeRequests   ChangeRequest[]
 
   @@map("projects")
 }
@@ -199,6 +205,67 @@ enum BillingMethod {
 
 enum ProposalStatus {
   DRAFT
+  SENT
+  APPROVED
+  DECLINED
+  REVISION_REQUESTED
+}
+
+model ProposalVersion {
+  id            Int                   @id @default(autoincrement())
+  version       Int
+  snapshot      Json
+  status        ProposalVersionStatus
+  sentAt        DateTime              @default(now())
+  respondedAt   DateTime?
+  responseNote  String?
+
+  project       Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId     Int
+  sentBy        User    @relation("ProposalVersionSentBy", fields: [sentById], references: [id])
+  sentById      Int
+  respondedBy   User?   @relation("ProposalVersionRespondedBy", fields: [respondedById], references: [id])
+  respondedById Int?
+
+  @@unique([projectId, version])
+  @@map("proposal_versions")
+}
+
+enum ProposalVersionStatus {
+  SENT
+  APPROVED
+  DECLINED
+  REVISION_REQUESTED
+}
+
+model ChangeRequest {
+  id            Int                  @id @default(autoincrement())
+  title         String
+  description   String?
+  costDelta     Decimal              @db.Decimal(12, 2)
+  milestones    Json
+  status        ChangeRequestStatus  @default(SENT)
+  sentAt        DateTime             @default(now())
+  respondedAt   DateTime?
+  responseNote  String?
+
+  project       Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId     Int
+  requestedBy   User    @relation("ChangeRequestRequestedBy", fields: [requestedById], references: [id])
+  requestedById Int
+  respondedBy   User?   @relation("ChangeRequestRespondedBy", fields: [respondedById], references: [id])
+  respondedById Int?
+
+  supersedes    ChangeRequest?  @relation("ChangeRequestSupersedes", fields: [supersedesId], references: [id])
+  supersedesId  Int?    @unique
+  supersededBy  ChangeRequest?  @relation("ChangeRequestSupersedes")
+
+  createdMilestones Milestone[]
+
+  @@map("change_requests")
+}
+
+enum ChangeRequestStatus {
   SENT
   APPROVED
   DECLINED
@@ -299,6 +366,8 @@ model Milestone {
 
   project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId Int
+  changeRequest   ChangeRequest? @relation(fields: [changeRequestId], references: [id])
+  changeRequestId Int?
 
   tasks           Task[]
   invoices        Invoice[]
