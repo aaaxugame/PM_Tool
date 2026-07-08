@@ -89,6 +89,8 @@ PM Tool has three user types and eight roles:
 | Approve Invoices | Yes | Yes | Yes | -- | -- | -- | -- | Yes |
 | Send / Revise Project Proposals | Yes | Yes | Yes | Yes | -- | -- | -- | -- |
 | Approve/Decline/Request Revision on Proposals | Yes | Yes | Yes | Yes | -- | -- | -- | Yes (own projects only) |
+| Raise Change Requests | Yes | Yes | Yes | Yes | -- | -- | -- | -- |
+| Approve/Decline/Request Revision on Change Requests | Yes | Yes | Yes | Yes | -- | -- | -- | Yes (own projects only) |
 | View Financials | Yes | Yes | Yes | Yes | -- | -- | -- | -- |
 | View Reports | Yes | Yes | Yes | Yes | -- | -- | -- | -- |
 | Admin Panel | Yes | Yes | -- | -- | -- | -- | -- | -- |
@@ -200,12 +202,25 @@ For any project with a client assigned, scope and billing terms must be proposed
 1. **Build the proposal** (PM, AM, Admin, Super Admin) - set the project's Billing Method, Estimated Cost, Estimated Hours, and, for Time & Materials or Mixed billing, an **Hourly Rate**. Add milestones with a **Contracted Amount** for Milestone or Mixed billing.
 2. **Send Proposal** - from the project detail page, click **Send Proposal**. The client receives an email notification. Sending is blocked with an error if an hourly rate is required but not set.
 3. **Client reviews** - the client opens the project and sees a Proposal panel where they can **Approve**, **Decline** (with a required reason), or **Request Revision** (with notes).
-4. **On approval** - the project automatically moves to ACTIVE status, and the Billing Method, Estimated Cost, Estimated Hours, Hourly Rate, and each milestone's Contracted Amount become locked — they cannot be edited further.
+4. **On approval** - the project automatically moves to ACTIVE status, and the Billing Method, Estimated Cost, Estimated Hours, Hourly Rate, and each milestone's Contracted Amount, Name, and Due Date all become locked — they cannot be edited further.
 5. **Starting a new revision** - PM/AM/Admin can click **Start New Revision** to unlock these fields again and bump the proposal version, then edit and resend for approval.
 
 **Proposal statuses:** DRAFT -> SENT -> APPROVED / DECLINED / REVISION_REQUESTED. From any of the latter three, starting a new revision returns the proposal to DRAFT with the version number incremented.
 
 A client can only view and act on proposals for projects belonging to their own organization.
+
+**Proposal History:** Every time a proposal is sent, a permanent snapshot of the terms and milestones at that moment is recorded, along with the client's response and any comment. Click **View History** next to the version badge to open a timeline of every past version — what was sent, who sent it, how the client responded, and any decline reason or revision note. Nothing is ever removed or overwritten by a later revision; even after a proposal is approved and later revised again, all earlier versions remain visible. Both internal staff and the client can view the full history.
+
+### Change Requests
+
+Once a project's proposal is **APPROVED**, the client may ask for additional work beyond the original scope (for example, an extra feature or deliverable). Rather than reopening and re-locking the entire proposal, this is handled with a separate **Change Request**:
+
+1. **Raise a change request** (PM, AM, Admin, Super Admin) - from the project detail page, click **+ New Change Request** and fill in a Title, optional Description, the **Additional Cost**, and optionally one or more new milestones (Name, Due Date, Amount).
+2. **Client reviews** - the client sees the change request alongside any others on the project and can **Approve**, **Decline** (with a required reason), or **Request Revision** (with notes) — the same as the proposal workflow.
+3. **On approval** - any milestones listed on the change request are created on the project automatically, and the project's Estimated Cost increases by the Additional Cost. The original approved proposal and its history are not affected.
+4. **On decline or revision request** - the change request stays visible permanently with the client's response and note. To address the feedback, raise a new change request; the original is never edited or removed.
+
+A project can have any number of change requests over its lifetime, and each one's full history — including declined or superseded attempts — remains visible.
 
 ### Project Detail Page
 
@@ -213,7 +228,7 @@ Click any project name to open the detail page, which has four tabs:
 
 1. **Work** - Manage milestones and tasks
    - Create, edit, and delete milestones (Super Admin, Admin, AM, PM only)
-   - Each milestone can carry a **Contracted Amount**, used to bill the client when marked complete (see Client Proposal Workflow above). This amount is locked once the project's proposal is approved.
+   - Each milestone can carry a **Contracted Amount**, used to bill the client when marked complete (see Client Proposal Workflow above). The milestone's Name, Due Date, and Contracted Amount are all locked once the project's proposal is approved.
    - Create, edit, and delete tasks under milestones (managers on any project; Team Members, Contractors, and Vendor Contacts only on projects they're assigned to)
    - Quick-cycle task status by clicking the status badge (TODO -> IN_PROGRESS -> REVIEW -> DONE) — same access rule as editing tasks
    - View team members panel
