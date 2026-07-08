@@ -85,6 +85,7 @@ export default function ProjectDetailPage() {
   const [mModal, setMModal] = useState<null | 'create' | Milestone>(null)
   const [mForm, setMForm] = useState<typeof MILESTONE_EMPTY>(MILESTONE_EMPTY)
   const [mSaving, setMSaving] = useState(false)
+  const [mError, setMError] = useState<string | null>(null)
 
   // Task modal
   const [tModal, setTModal] = useState<null | 'create' | Task>(null)
@@ -133,20 +134,23 @@ export default function ProjectDetailPage() {
   }, [projectId])
 
   // ── Milestone handlers ───────────────────────────────────────────────────
-  const openMCreate = () => { setMForm(MILESTONE_EMPTY); setMModal('create') }
+  const openMCreate = () => { setMForm(MILESTONE_EMPTY); setMError(null); setMModal('create') }
   const openMEdit = (m: Milestone) => {
     setMForm({ name: m.name, description: m.description ?? '', dueDate: m.dueDate ? m.dueDate.slice(0, 10) : '', status: m.status, triggersInvoice: m.triggersInvoice, amount: m.amount ?? '' })
+    setMError(null)
     setMModal(m)
   }
   const setM = (k: string, v: unknown) => setMForm(p => ({ ...p, [k]: v }))
   const handleMSave = async () => {
-    setMSaving(true)
+    setMSaving(true); setMError(null)
     try {
       const payload: Record<string, unknown> = Object.fromEntries(Object.entries(mForm).filter(([, v]) => v !== '' && v !== undefined))
-      if (project?.proposalStatus === 'APPROVED' && project.clientId) delete payload.amount
+      if (proposalApproved) { delete payload.amount; delete payload.name; delete payload.dueDate }
       if (mModal === 'create') await milestonesApi.create(projectId, payload)
       else await milestonesApi.update(projectId, (mModal as Milestone).id, payload)
       await loadProject(); setMModal(null)
+    } catch (e: any) {
+      setMError(e?.response?.data?.message ?? 'Failed to save milestone')
     } finally { setMSaving(false) }
   }
   const handleMDelete = async (mid: number) => {
@@ -828,10 +832,21 @@ export default function ProjectDetailPage() {
       {mModal !== null && (
         <Modal title={typeof mModal === 'string' ? 'New Milestone' : 'Edit Milestone'} onClose={() => setMModal(null)}>
           <div className="space-y-3">
+            {mError && (
+              <div className="px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600">{mError}</div>
+            )}
+            {proposalApproved && (
+              <div className="px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-600">
+                Name, Due Date, and Contracted Amount are locked because the proposal is approved. Start a new revision to change them.
+              </div>
+            )}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Name *</label>
               <input type="text" value={mForm.name} onChange={e => setM('name', e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                disabled={proposalApproved}
+                className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  proposalApproved ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-300'
+                }`} />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
@@ -842,7 +857,10 @@ export default function ProjectDetailPage() {
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Due Date</label>
                 <input type="date" value={mForm.dueDate} onChange={e => setM('dueDate', e.target.value)}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  disabled={proposalApproved}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                    proposalApproved ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-300'
+                  }`} />
               </div>
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
@@ -870,9 +888,6 @@ export default function ProjectDetailPage() {
                   proposalApproved ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed' : 'border-gray-300'
                 }`}
               />
-              {proposalApproved && (
-                <p className="text-xs text-amber-600 mt-1">Locked — proposal approved. Start a new revision to change this.</p>
-              )}
             </div>
           </div>
           <div className="flex justify-end gap-2 mt-5">
