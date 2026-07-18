@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PM Tool – 使用者手冊</title>
+<style>
+  /* ── Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Microsoft JhengHei", "PingFang TC", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.75;
+    color: #1a1a2e;
+    background: #fff;
+    padding: 0;
+  }
+
+  /* ── Cover page ── */
+  .cover {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    min-height: 800px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #3b82f6 100%);
+    color: #fff;
+    text-align: center;
+    page-break-after: always;
+    padding: 60px 40px;
+  }
+  .cover-logo {
+    width: 72px;
+    height: 72px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 28px;
+    font-size: 36px;
+  }
+  .cover h1 {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 10px;
+  }
+  .cover h2 {
+    font-size: 20px;
+    font-weight: 400;
+    opacity: 0.85;
+    margin-bottom: 40px;
+  }
+  .cover-meta {
+    font-size: 13px;
+    opacity: 0.7;
+    margin-top: auto;
+  }
+  .cover-divider {
+    width: 60px;
+    height: 3px;
+    background: rgba(255,255,255,0.5);
+    border-radius: 2px;
+    margin: 0 auto 40px;
+  }
+
+  /* ── TOC page ── */
+  .toc-page {
+    padding: 60px 80px;
+    page-break-after: always;
+  }
+  .toc-page h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e3a5f;
+    border-bottom: 3px solid #2563eb;
+    padding-bottom: 10px;
+    margin-bottom: 28px;
+  }
+  .toc-list { list-style: none; }
+  .toc-list li {
+    display: flex;
+    align-items: baseline;
+    padding: 6px 0;
+    font-size: 13.5px;
+  }
+  .toc-list li::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px dotted #c7d2e0;
+    margin: 0 10px;
+    position: relative;
+    top: -2px;
+  }
+  .toc-list a {
+    color: #1e3a5f;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .toc-list a:hover { color: #2563eb; }
+  .toc-page-num { color: #6b7280; font-size: 12px; }
+
+  /* ── Content pages ── */
+  .content {
+    padding: 56px 80px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  /* ── Section heading ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 0 0 28px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid #e5eaf3;
+    page-break-after: avoid;
+  }
+  .section-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+  h1.section-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e3a5f;
+  }
+
+  /* ── Headings inside sections ── */
+  h2.sub {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e3a5f;
+    margin: 28px 0 10px;
+    page-break-after: avoid;
+  }
+  h3.sub {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #374151;
+    margin: 18px 0 8px;
+    page-break-after: avoid;
+  }
+
+  /* ── Body text ── */
+  p { margin: 0 0 10px; }
+
+  /* ── Tables ── */
+  .table-wrap { overflow-x: auto; margin: 12px 0 18px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  thead tr { background: #1e3a5f; color: #fff; }
+  thead th {
+    padding: 9px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.3px;
+  }
+  tbody tr:nth-child(even) { background: #f0f4fb; }
+  tbody tr:hover { background: #dbeafe; }
+  tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e5eaf3;
+    vertical-align: top;
+  }
+  td strong { color: #1e3a5f; }
+
+  /* ── Code / flow ── */
+  code {
+    font-family: "Cascadia Code", "Fira Code", "Courier New", monospace;
+    font-size: 12px;
+    background: #f1f5f9;
+    color: #1e3a5f;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-size: 12px;
+    font-family: "Cascadia Code", "Fira Code", monospace;
+    margin: 12px 0 18px;
+    overflow-x: auto;
+    page-break-inside: avoid;
+  }
+
+  /* ── Blockquote / callout ── */
+  blockquote {
+    background: #eff6ff;
+    border-left: 4px solid #2563eb;
+    border-radius: 0 6px 6px 0;
+    padding: 12px 16px;
+    margin: 12px 0 18px;
+    color: #1e3a5f;
+    font-style: italic;
+    font-size: 12.5px;
+  }
+
+  /* ── Lists ── */
+  ul, ol {
+    padding-left: 22px;
+    margin: 8px 0 14px;
+  }
+  li { margin-bottom: 4px; }
+  li strong { color: #1e3a5f; }
+
+  /* ── Role badges ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 1px 2px;
+  }
+  .badge-blue   { background: #dbeafe; color: #1d4ed8; }
+  .badge-green  { background: #dcfce7; color: #15803d; }
+  .badge-purple { background: #ede9fe; color: #7c3aed; }
+  .badge-orange { background: #ffedd5; color: #c2410c; }
+  .badge-gray   { background: #f1f5f9; color: #475569; }
+
+  /* ── Info callout box ── */
+  .info-box {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 14px 0;
+    font-size: 12.5px;
+    color: #1e40af;
+  }
+  .info-box strong { display: block; margin-bottom: 4px; }
+
+  /* ── Step list ── */
+  .step-list { list-style: none; padding-left: 0; counter-reset: steps; }
+  .step-list li {
+    counter-increment: steps;
+    padding: 8px 0 8px 44px;
+    position: relative;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .step-list li::before {
+    content: counter(steps);
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 28px;
+    height: 28px;
+    background: #2563eb;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* ── Section break ── */
+  .section-break { page-break-before: always; padding-top: 56px; }
+
+  /* ── Print ── */
+  @media print {
+    body { font-size: 12px; }
+    .cover { page-break-after: always; }
+    .toc-page { page-break-after: always; }
+    .section-break { page-break-before: always; }
+    .section-header { page-break-after: avoid; }
+    h2.sub, h3.sub { page-break-after: avoid; }
+    pre, table, blockquote { page-break-inside: avoid; }
+    a { color: inherit; text-decoration: none; }
+    @page {
+      margin: 18mm 18mm 18mm 18mm;
+    }
+    @page :first { margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     COVER
+══════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-logo">📋</div>
+  <h1>PM Tool</h1>
+  <h2>使用者手冊</h2>
+  <div class="cover-divider"></div>
+  <p style="opacity:.8;font-size:15px;margin-bottom:8px;">適用於所有角色與功能的完整指南</p>
+  <p style="opacity:.6;font-size:13px;">版本 1.0 &nbsp;·&nbsp; 2026 年 6 月</p>
+  <div class="cover-meta" style="margin-top:60px;">
+    <p>支援 EN / 簡 / 繁 &nbsp;·&nbsp; 共 13 個章節</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TABLE OF CONTENTS
+══════════════════════════════════════ -->
+<div class="toc-page">
+  <h2>目錄</h2>
+  <ul class="toc-list">
+    <li><a href="#s1">1. 快速入門</a></li>
+    <li><a href="#s2">2. 使用者角色與權限</a></li>
+    <li><a href="#s3">3. 儀表板</a></li>
+    <li><a href="#s4">4. 專案</a></li>
+    <li><a href="#s5">5. 任務</a></li>
+    <li><a href="#s6">6. 時間追蹤</a></li>
+    <li><a href="#s7">7. 工時表</a></li>
+    <li><a href="#s8">8. 發票</a></li>
+    <li><a href="#s9">9. 財務</a></li>
+    <li><a href="#s10">10. 報告</a></li>
+    <li><a href="#s11">11. 管理面板</a></li>
+    <li><a href="#s12">12. 個人檔案</a></li>
+    <li><a href="#s13">13. 語言支援</a></li>
+  </ul>
+</div>
+
+<!-- ══════════════════════════════════════
+     CONTENT
+══════════════════════════════════════ -->
+<div class="content">
+
+<!-- § 1 -->
+<div id="s1">
+  <div class="section-header">
+    <div class="section-number">1</div>
+    <h1 class="section-title">快速入門</h1>
+  </div>
+
+  <h2 class="sub">登入</h2>
+  <p>開啟應用程式網址，使用以下兩種方式之一登入：</p>
+  <ul>
+    <li><strong>電子郵件與密碼</strong> — 輸入電子郵件與密碼，然後點擊<strong>登入</strong>。</li>
+    <li><strong>Google OAuth</strong> — 點擊<strong>使用 Google 登入</strong>，以您的 Google 帳號進行身分驗證。</li>
+  </ul>
+  <p>若您的帳號尚未指派角色，儀表板上會出現一則警告訊息：</p>
+  <blockquote>「您的帳戶尚未分配角色，請聯絡管理員以取得存取權限。」</blockquote>
+
+  <h2 class="sub">導覽</h2>
+  <p>左側側邊欄提供所有功能的入口，顯示項目依您的角色而異：</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>分類</th><th>選單項目</th><th>可見對象</th></tr></thead>
+      <tbody>
+        <tr><td>—</td><td>儀表板</td><td>所有人</td></tr>
+        <tr><td>管理</td><td>專案</td><td>所有人</td></tr>
+        <tr><td>管理</td><td>任務</td><td>內部員工 + 廠商</td></tr>
+        <tr><td>時間與帳單</td><td>時間追蹤</td><td>內部員工 + 廠商</td></tr>
+        <tr><td>時間與帳單</td><td>工時表</td><td>內部員工 + 廠商</td></tr>
+        <tr><td>時間與帳單</td><td>發票</td><td>所有人</td></tr>
+        <tr><td>時間與帳單</td><td>財務</td><td>管理員、超級管理員、AM、PM</td></tr>
+        <tr><td>時間與帳單</td><td>報告</td><td>管理員、超級管理員、AM、PM</td></tr>
+        <tr><td>管理後台</td><td>管理面板</td><td>管理員、超級管理員</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>側邊欄底部會顯示您的使用者資訊，包含姓名、職稱、電子郵件與使用者類型（內部員工、廠商或客戶）。點擊<strong>編輯個人檔案</strong>即可前往個人檔案頁面。</p>
+</div>
+
+<!-- § 2 -->
+<div id="s2" class="section-break">
+  <div class="section-header">
+    <div class="section-number">2</div>
+    <h1 class="section-title">使用者角色與權限</h1>
+  </div>
+  <p>PM Tool 有三種使用者類型與八個角色：</p>
+
+  <h2 class="sub">內部員工</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>角色</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><strong>超級管理員（Super Admin）</strong></td><td>擁有完整系統權限，包括管理面板及所有管理功能</td></tr>
+        <tr><td><strong>管理員（Admin）</strong></td><td>擁有完整系統權限，包括管理面板及所有管理功能</td></tr>
+        <tr><td><strong>客戶經理（Account Manager，AM）</strong></td><td>管理客戶關係、專案、發票、財務與報告</td></tr>
+        <tr><td><strong>專案經理（Project Manager，PM）</strong></td><td>管理專案、任務、工時表、發票、財務與報告</td></tr>
+        <tr><td><strong>團隊成員（Team Member）</strong></td><td>處理指派的任務、記錄工時、提交工時表</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sub">廠商使用者</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>角色</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><strong>承包商（Contractor）</strong></td><td>記錄工時、提交工時表、檢視所指派的專案</td></tr>
+        <tr><td><strong>廠商聯絡人（Vendor Contact）</strong></td><td>管理廠商關係、提交專案申請與廠商發票</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sub">客戶使用者</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>角色</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td><strong>客戶（Client）</strong></td><td>檢視自己的專案，審核並核准/拒絕專案提案，審核並核准發票</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sub">權限總覽</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>操作</th><th>超級管理員</th><th>管理員</th><th>AM</th><th>PM</th>
+          <th>團隊成員</th><th>承包商</th><th>廠商聯絡人</th><th>客戶</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>建立/編輯/刪除專案</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>僅可申請</td><td>—</td></tr>
+        <tr><td>建立/編輯/刪除里程碑</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>建立/編輯/刪除任務</td><td>任意專案</td><td>任意專案</td><td>任意專案</td><td>任意專案</td><td>僅限已指派專案</td><td>僅限已指派專案</td><td>僅限已指派專案</td><td>—</td></tr>
+        <tr><td>記錄工時</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td></tr>
+        <tr><td>提交工時表</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td></tr>
+        <tr><td>核准/駁回工時表</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>建立客戶發票</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>建立廠商發票</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✓</td><td>—</td></tr>
+        <tr><td>核准發票</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
+        <tr><td>發送/修訂專案提案</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>核准/拒絕/要求修訂提案</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>✓（僅限本身專案）</td></tr>
+        <tr><td>提出變更請求</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>核准/拒絕/要求修訂變更請求</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>✓（僅限本身專案）</td></tr>
+        <tr><td>檢視財務</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>檢視報告</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>管理面板</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- § 3 -->
+<div id="s3" class="section-break">
+  <div class="section-header">
+    <div class="section-number">3</div>
+    <h1 class="section-title">儀表板</h1>
+  </div>
+  <p>登入後，每個角色都會看到為其量身打造的儀表板。</p>
+
+  <h2 class="sub">客戶經理 / 管理員 / 超級管理員儀表板</h2>
+  <ul>
+    <li><strong>統計卡片：</strong>專案總數、進行中專案數、客戶總數、合約總金額</li>
+    <li><strong>營收管道：</strong>已開立、已收款、未結清金額，並附帶待審核報價與核准的提示標籤</li>
+    <li><strong>客戶專案組合：</strong>表格顯示每個客戶的專案數量、進行中專案數與合約金額</li>
+    <li><strong>需處理的發票：</strong>需要審核的發票清單，附帶狀態標籤</li>
+    <li><strong>待處理廠商報價：</strong>等待核准的報價，附帶核准/拒絕操作</li>
+    <li><strong>依狀態劃分的專案：</strong>依目前狀態劃分的專案分布</li>
+  </ul>
+
+  <h2 class="sub">專案經理儀表板</h2>
+  <ul>
+    <li><strong>統計卡片：</strong>我的專案、進行中、本週到期任務、待處理工時表</li>
+    <li><strong>待處理廠商專案申請：</strong>廠商提交的專案申請，附帶核准/拒絕按鈕</li>
+    <li><strong>我的專案：</strong>已指派專案清單，附帶健康度指標（正常、有風險、已延遲）</li>
+    <li><strong>任務分布：</strong>依狀態劃分的任務分布（待辦、進行中、審核中、已完成）</li>
+    <li><strong>待處理報價：</strong>等待審核的廠商報價</li>
+  </ul>
+
+  <h2 class="sub">廠商儀表板</h2>
+  <ul>
+    <li><strong>廠商資訊卡：</strong>廠商名稱、聯絡方式、專案數量</li>
+    <li><strong>指標卡片：</strong>合約總金額、已開立、已付款、未結清金額</li>
+    <li><strong>進行中專案：</strong>目前專案清單，附帶狀態與健康度指標</li>
+    <li><strong>報價：</strong>管理廠商報價（建立、提交、刪除），並追蹤狀態（待處理、已提交、已核准、已拒絕）</li>
+    <li><strong>最新發票：</strong>最新的廠商發票及其狀態</li>
+  </ul>
+
+  <h2 class="sub">客戶儀表板</h2>
+  <ul>
+    <li><strong>帳單摘要：</strong>合約金額、已開立、已付款、未結清金額</li>
+    <li><strong>我的專案：</strong>專案卡片網格，顯示狀態、核准狀態、任務進度條、PM/AM 負責人與到期日</li>
+    <li><strong>最新發票：</strong>最新發票清單及狀態標籤</li>
+    <li><strong>專案時間軸：</strong>進行中專案里程碑總覽</li>
+  </ul>
+
+  <h2 class="sub">團隊成員 / 一般儀表板</h2>
+  <ul>
+    <li><strong>統計卡片：</strong>進行中專案、未完成任務、待處理工時表、本週工時、未結清發票</li>
+    <li><strong>最新專案：</strong>快速前往專案及其任務數量</li>
+    <li><strong>最新發票：</strong>最新發票清單及狀態</li>
+  </ul>
+</div>
+
+<!-- § 4 -->
+<div id="s4" class="section-break">
+  <div class="section-header">
+    <div class="section-number">4</div>
+    <h1 class="section-title">專案</h1>
+  </div>
+  <p>透過側邊欄的<strong>專案</strong>進入。</p>
+
+  <h2 class="sub">標籤頁（依角色而異）</h2>
+  <h3 class="sub">內部員工 — 4 個標籤頁</h3>
+  <ol>
+    <li><strong>我的專案</strong> — 指派給您的專案（作為 PM、AM 或團隊成員）</li>
+    <li><strong>所有專案</strong> — 系統中的所有專案，可依 PM、AM、客戶與廠商篩選</li>
+    <li><strong>廠商申請</strong> — 廠商提交、等待核准的專案申請</li>
+    <li><strong>已封存專案</strong> — 狀態為 ARCHIVED（已封存）的專案</li>
+  </ol>
+  <h3 class="sub">廠商使用者 — 3 個標籤頁</h3>
+  <ol>
+    <li><strong>目前專案</strong> — 指派給您廠商的進行中專案</li>
+    <li><strong>我的申請</strong> — 您所提交的專案申請及其核准狀態</li>
+    <li><strong>已封存專案</strong> — 已封存的廠商專案</li>
+  </ol>
+  <h3 class="sub">客戶使用者 — 1 個標籤頁</h3>
+  <ol>
+    <li><strong>我的專案</strong> — 與您所屬機構關聯的專案</li>
+  </ol>
+
+  <h2 class="sub">建立專案</h2>
+  <p>點擊右上角的<strong>+ 建立</strong>，填寫專案表單：</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>欄位</th><th>是否必填</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td>名稱</td><td>是</td><td>專案名稱</td></tr>
+        <tr><td>類別</td><td>否</td><td>專案類別</td></tr>
+        <tr><td>描述</td><td>否</td><td>專案詳情</td></tr>
+        <tr><td>狀態</td><td>否</td><td>DRAFT（草稿）、ACTIVE（進行中）、ON_HOLD（暫停）、COMPLETED（已完成）、CANCELLED（已取消）、ARCHIVED（已封存）</td></tr>
+        <tr><td>專案類型</td><td>否</td><td>INTERNAL（內部）或其他類型</td></tr>
+        <tr><td>優先等級</td><td>否</td><td>LOW（低）、MEDIUM（中）、HIGH（高）、URGENT（緊急）</td></tr>
+        <tr><td>計費方式</td><td>否</td><td>按工時計費、固定價格、按里程碑、混合</td></tr>
+        <tr><td>風險等級</td><td>否</td><td>專案風險評估</td></tr>
+        <tr><td>客戶</td><td>否</td><td>指派客戶機構</td></tr>
+        <tr><td>廠商</td><td>否</td><td>指派廠商機構</td></tr>
+        <tr><td>專案經理</td><td>否</td><td>指派 PM</td></tr>
+        <tr><td>客戶經理</td><td>否</td><td>指派 AM</td></tr>
+        <tr><td>團隊成員</td><td>否</td><td>多選團隊成員</td></tr>
+        <tr><td>開始日期</td><td>否</td><td>專案開始日期</td></tr>
+        <tr><td>結束日期</td><td>否</td><td>專案結束日期</td></tr>
+        <tr><td>預估成本</td><td>否</td><td>預計專案成本</td></tr>
+        <tr><td>預估工時</td><td>否</td><td>預計總工時</td></tr>
+        <tr><td>預計人數</td><td>否</td><td>所需工作人員數量</td></tr>
+        <tr><td>所需技能</td><td>否</td><td>所需技能</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>使用<strong>儲存為草稿</strong>可儲存但不啟用，或使用<strong>儲存</strong>直接建立專案。</p>
+
+  <h2 class="sub">廠商專案申請</h2>
+  <p>廠商可點擊<strong>+ 新增申請</strong>提交專案申請。申請表單包含：名稱、類別、描述、開始/結束日期、預計人數、所需技能、計費方式、預估成本與預估工時。</p>
+  <p>申請可儲存為草稿或提交。提交後，PM/AM/管理員可在「廠商申請」標籤頁或其儀表板中<strong>核准</strong>或<strong>拒絕</strong>該申請。</p>
+
+  <h2 class="sub">客戶提案流程</h2>
+  <p>對於已指派客戶的專案，在專案正式啟用前，必須先向客戶提出範圍與計費條款的提案並取得核准。這與上述的「廠商專案申請」不同——它管理的是客戶對成本的確認，而非廠商的接案申請。</p>
+  <ol>
+    <li><strong>擬定提案</strong>（PM、AM、管理員、超級管理員）— 設定專案的計費方式、預估成本、預估工時，若為按工時計費或混合計費，還須設定<strong>時薪</strong>。為按里程碑或混合計費的專案新增里程碑，並設定<strong>合約金額</strong>。</li>
+    <li><strong>發送提案</strong> — 在專案詳情頁點擊<strong>發送提案</strong>。客戶會收到電子郵件通知。若必須設定時薪但尚未設定，發送將被阻擋並顯示錯誤訊息。</li>
+    <li><strong>客戶審核</strong> — 客戶開啟專案後會看到提案面板，可以<strong>核准</strong>、<strong>拒絕</strong>（須填寫原因）或<strong>要求修訂</strong>（附帶備註）。</li>
+    <li><strong>核准後</strong> — 專案會自動進入 ACTIVE（進行中）狀態，計費方式、預估成本、預估工時、時薪，以及每個里程碑的合約金額、名稱與到期日皆會鎖定，無法再編輯。</li>
+    <li><strong>發起新修訂</strong> — PM/AM/管理員可點擊<strong>開始新修訂</strong>解鎖這些欄位並將提案版本號加一，隨後編輯並重新發送以待核准。</li>
+  </ol>
+  <p><strong>提案狀態：</strong>DRAFT（草稿）→ SENT（已發送）→ APPROVED（已核准）/ DECLINED（已拒絕）/ REVISION_REQUESTED（已請求修訂）。從後三種狀態中的任一種發起新修訂，提案都會回到 DRAFT 狀態，且版本號遞增。</p>
+  <p>客戶僅能檢視與處理屬於自己機構的專案提案。</p>
+  <p><strong>提案歷史：</strong>每次發送提案時，系統都會永久記錄當時的條款與里程碑快照，以及客戶的回應與任何留言。點擊版本標籤旁的<strong>檢視歷史</strong>即可開啟時間軸，查看每一個歷史版本——發送了什麼內容、誰發送的、客戶如何回應，以及任何拒絕原因或修訂備註。任何後續修訂都不會刪除或覆蓋歷史記錄；即使提案已核准並再次修訂，所有先前版本依然可見。內部員工與客戶皆可檢視完整歷史。</p>
+
+  <h2 class="sub">變更請求</h2>
+  <p>專案提案<strong>核准</strong>後，客戶可能會要求在原有範圍之外新增額外工作（例如額外的功能或交付項目）。為避免重新開啟並再次鎖定整份提案，系統使用獨立的<strong>變更請求</strong>來處理這類需求：</p>
+  <ol>
+    <li><strong>提出變更請求</strong>（PM、AM、管理員、超級管理員）— 在專案詳情頁點擊<strong>+ 新增變更請求</strong>，填寫標題、選填的描述、<strong>追加成本</strong>，並可選擇新增一個或多個新里程碑（名稱、到期日、金額）。</li>
+    <li><strong>客戶審核</strong> — 客戶會在專案頁面看到該變更請求及其他歷史請求，可以<strong>核准</strong>、<strong>拒絕</strong>（須填寫原因）或<strong>要求修訂</strong>（附帶備註）——流程與提案審核相同。</li>
+    <li><strong>核准後</strong> — 變更請求中列出的所有里程碑會自動建立於專案中，專案的預估成本會增加相應的追加成本。原先核准的提案及其歷史記錄不受影響。</li>
+    <li><strong>遭拒絕或要求修訂後</strong> — 該變更請求會永久保留，並顯示客戶的回應與備註。若需處理回饋意見，須提出新的變更請求；原請求不會被編輯或刪除。</li>
+  </ol>
+  <p>一個專案在其生命週期內可擁有任意數量的變更請求，每一筆的完整歷史——包括遭拒絕或被取代的記錄——都會持續保留可見。</p>
+
+  <h2 class="sub">專案詳情頁</h2>
+  <p>點擊任一專案名稱以開啟詳情頁，該頁面包含四個標籤頁：</p>
+  <ol>
+    <li><strong>工作項目</strong> — 管理里程碑與任務。建立/編輯/刪除里程碑僅限超級管理員、管理員、AM 與 PM。每個里程碑可設定<strong>合約金額</strong>，用於在標記完成後向客戶請款（詳見上述「客戶提案流程」）；一旦專案提案獲得核准，該里程碑的名稱、到期日與合約金額皆會鎖定。建立/編輯/刪除任務（以及點擊狀態標籤快速切換任務狀態）對管理者在任意專案中皆可使用，團隊成員、承包商與廠商聯絡人則僅限於其被指派的專案。此標籤頁也可檢視團隊成員面板。</li>
+    <li><strong>報價</strong> — 該專案的廠商報價（檢視、建立與管理；狀態包含：PENDING 待處理、SUBMITTED 已提交、APPROVED 已核准、REJECTED 已拒絕）</li>
+    <li><strong>預算</strong> — 專案預算追蹤；建立與管理預算明細項目</li>
+    <li><strong>文件</strong> — 上傳與管理專案文件</li>
+  </ol>
+</div>
+
+<!-- § 5 -->
+<div id="s5" class="section-break">
+  <div class="section-header">
+    <div class="section-number">5</div>
+    <h1 class="section-title">任務</h1>
+  </div>
+  <p>透過側邊欄的<strong>任務</strong>進入（僅限內部員工與廠商使用者）。</p>
+
+  <h2 class="sub">檢視任務</h2>
+  <p>任務可以<strong>表格</strong>檢視（附帶狀態篩選標籤：<strong>全部</strong>、<strong>待辦</strong>、<strong>進行中</strong>、<strong>審核中</strong>、<strong>已完成</strong>），也可以<strong>看板</strong>檢視（看板風格欄位配置）。使用<strong>專案</strong>下拉選單依專案篩選。此檢視會顯示所有專案中的任務，無論是否指派給您——瀏覽不受限制，但編輯權限受限（詳見下文）。</p>
+
+  <h2 class="sub">建立任務</h2>
+  <p>點擊<strong>+ 建立</strong>並填寫：</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>欄位</th><th>是否必填</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td>名稱</td><td>是</td><td>任務名稱</td></tr>
+        <tr><td>描述</td><td>否</td><td>任務詳情</td></tr>
+        <tr><td>狀態</td><td>否</td><td>TODO（待辦）、IN_PROGRESS（進行中）、REVIEW（審核中）、DONE（已完成）</td></tr>
+        <tr><td>優先等級</td><td>否</td><td>LOW（低）、MEDIUM（中）、HIGH（高）、URGENT（緊急）</td></tr>
+        <tr><td>專案</td><td>是</td><td>該任務所屬的專案</td></tr>
+        <tr><td>里程碑</td><td>否</td><td>關聯至某個專案里程碑</td></tr>
+        <tr><td>負責人</td><td>否</td><td>被指派該任務的使用者</td></tr>
+        <tr><td>到期日</td><td>否</td><td>任務期限</td></tr>
+        <tr><td>預估工時</td><td>否</td><td>工時估算</td></tr>
+        <tr><td>是否計費</td><td>否</td><td>切換該任務是否計費</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>「專案」與「負責人」選項範圍取決於您的權限：</strong>超級管理員/管理員/AM/PM 可檢視所有專案，並可指派給與所選專案相關的任何人。團隊成員、承包商與廠商聯絡人僅能看到指派給自己的專案，且只能指派給與該專案相關的人員。</p>
+
+  <h2 class="sub">快速切換狀態</h2>
+  <p>點擊任一任務上的狀態標籤，可依序循環切換：<strong>TODO（待辦）→ IN_PROGRESS（進行中）→ REVIEW（審核中）→ DONE（已完成）</strong>（表格檢視），或在看板檢視中將卡片拖曳至不同欄位。僅當您有權管理該任務時才可使用——超出您指派專案範圍的任務將無法編輯、刪除或變更狀態。</p>
+</div>
+
+<!-- § 6 -->
+<div id="s6" class="section-break">
+  <div class="section-header">
+    <div class="section-number">6</div>
+    <h1 class="section-title">時間追蹤</h1>
+  </div>
+  <p>透過側邊欄的<strong>時間追蹤</strong>進入（僅限內部員工與廠商使用者）。</p>
+
+  <h2 class="sub">記錄工時</h2>
+  <p>時間紀錄會顯示您所有的工時記錄。點擊<strong>+ 新增紀錄</strong>以建立一筆：</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>欄位</th><th>是否必填</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td>日期</td><td>是</td><td>工作日期</td></tr>
+        <tr><td>專案</td><td>是</td><td>所從事的專案</td></tr>
+        <tr><td>任務</td><td>否</td><td>具體任務</td></tr>
+        <tr><td>描述</td><td>否</td><td>工作內容說明</td></tr>
+        <tr><td>開始時間</td><td>是</td><td>開始工作的時間</td></tr>
+        <tr><td>結束時間</td><td>是</td><td>停止工作的時間</td></tr>
+        <tr><td>時長</td><td>自動</td><td>依開始/結束時間自動計算</td></tr>
+        <tr><td>是否計費</td><td>否</td><td>該時長是否計費</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sub">即時計時器</h2>
+  <p>使用<strong>開始計時</strong>按鈕即時記錄工時。完成後點擊<strong>停止</strong>，開始/結束時間會自動帶入紀錄表單。</p>
+
+  <h2 class="sub">篩選</h2>
+  <p>可依<strong>專案</strong>或<strong>日期範圍</strong>（開始與結束日期）篩選您的工時記錄。</p>
+
+  <h2 class="sub">已鎖定紀錄</h2>
+  <p>已包含於已提交工時表中的工時記錄會被鎖定，無法編輯或刪除，並會顯示鎖形圖示。</p>
+</div>
+
+<!-- § 7 -->
+<div id="s7" class="section-break">
+  <div class="section-header">
+    <div class="section-number">7</div>
+    <h1 class="section-title">工時表</h1>
+  </div>
+  <p>透過側邊欄的<strong>工時表</strong>進入（僅限內部員工與廠商使用者）。</p>
+
+  <h2 class="sub">我的工時表</h2>
+  <p>建立工時表，將您的工時記錄整合提交以待核准。</p>
+  <ol class="step-list">
+    <li>點擊<strong>+ 新增工時表</strong></li>
+    <li>選擇<strong>期間開始</strong>與<strong>期間結束</strong>日期</li>
+    <li>系統會自動納入相符的工時記錄</li>
+    <li><strong>提交</strong>工時表以待核准，或儲存為草稿</li>
+  </ol>
+  <h3 class="sub">工時表狀態</h3>
+  <ul>
+    <li><strong>DRAFT（草稿）</strong> — 尚未提交；可編輯或刪除</li>
+    <li><strong>SUBMITTED（已提交）</strong> — 等待審核；記錄已鎖定</li>
+    <li><strong>APPROVED（已核准）</strong> — 已由審核人核准</li>
+    <li><strong>REJECTED（已拒絕）</strong> — 已附原因遭拒；請查看回饋後重新提交</li>
+  </ul>
+  <p>點擊任一工時表即可展開檢視其中所有關聯的工時記錄與工時數。</p>
+
+  <h2 class="sub">審核工時表（PM、AM、管理員、超級管理員）</h2>
+  <p><strong>待審核</strong>區域顯示所有團隊成員提交的工時表。</p>
+  <ol class="step-list">
+    <li>點擊某個工時表以展開並審核其工時記錄</li>
+    <li>點擊<strong>核准</strong>以核准該工時表</li>
+    <li>點擊<strong>拒絕</strong>並填寫原因以退回</li>
+  </ol>
+  <p><strong>已核准工時表</strong>區域顯示先前已核准的工時表，包括總工時、可計費工時與核准人。</p>
+</div>
+
+<!-- § 8 -->
+<div id="s8" class="section-break">
+  <div class="section-header">
+    <div class="section-number">8</div>
+    <h1 class="section-title">發票</h1>
+  </div>
+  <p>透過側邊欄的<strong>發票</strong>進入（所有人可見）。</p>
+
+  <h2 class="sub">標籤頁</h2>
+  <ul>
+    <li><strong>客戶發票</strong> — 發送給客戶的發票（內部員工與客戶可見）</li>
+    <li><strong>廠商發票</strong> — 來自廠商的發票（內部員工與廠商可見）</li>
+  </ul>
+  <p>使用<strong>狀態</strong>篩選器依目前狀態篩選發票。</p>
+
+  <h2 class="sub">客戶發票</h2>
+  <h3 class="sub">建立客戶發票（PM、AM、管理員）</h3>
+  <ol class="step-list">
+    <li>點擊<strong>+ 新增客戶發票</strong></li>
+    <li>選擇<strong>專案</strong>與<strong>客戶</strong></li>
+    <li>新增明細項目，填寫描述、數量、單價</li>
+    <li>設定稅率與幣別（自動由客戶設定帶入）</li>
+    <li>儲存為草稿</li>
+  </ol>
+  <h3 class="sub">依里程碑產生（PM、AM、管理員）</h3>
+  <p>對於按里程碑或混合計費的專案，點擊<strong>⚡ 依里程碑產生</strong>並選擇專案，系統會自動建立一張草稿發票，為每個已完成的里程碑產生一筆明細項目，並使用該里程碑的合約金額。已在已提交、已核准或已付款發票中向客戶請款過的里程碑不會重複計入。</p>
+  <h3 class="sub">發票生命週期</h3>
+  <pre>DRAFT（草稿）──► SENT（已發送）──► APPROVED（已核准）──► PAID（已付款）
+                                              └──► OVERDUE（逾期，若超過到期日）</pre>
+  <ul>
+    <li><strong>DRAFT（草稿）</strong> — 可編輯與刪除</li>
+    <li><strong>SENT（已發送）</strong> — 已發送給客戶以待審核</li>
+    <li><strong>APPROVED（已核准）</strong> — 客戶或 AM 已核准該發票</li>
+    <li><strong>PAID（已付款）</strong> — 已收到付款</li>
+    <li><strong>OVERDUE（逾期）</strong> — 已超過到期日仍未付款</li>
+  </ul>
+
+  <h2 class="sub">廠商發票</h2>
+  <h3 class="sub">建立廠商發票（廠商聯絡人）</h3>
+  <ol class="step-list">
+    <li>點擊<strong>+ 建立發票</strong></li>
+    <li>從已核准的報價中選擇（自動帶入詳細資訊）</li>
+    <li>新增明細項目</li>
+    <li>儲存為草稿或提交</li>
+  </ol>
+  <h3 class="sub">廠商發票生命週期</h3>
+  <pre>DRAFT（草稿）──► SUBMITTED（已提交）──► APPROVED（已核准）──► PAID（已付款）
+                              └──► REJECTED（已拒絕）
+                              └──► REVISION_REQUESTED（已請求修訂）──►（建立新版本）</pre>
+  <ul>
+    <li><strong>SUBMITTED（已提交）</strong> — 等待 PM/AM 審核</li>
+    <li><strong>APPROVED（已核准）</strong> — PM/AM 已核准該發票</li>
+    <li><strong>REJECTED（已拒絕）</strong> — AM 已拒絕該發票（附帶備註）</li>
+    <li><strong>REVISION_REQUESTED（已請求修訂）</strong> — PM/AM 要求修改；系統會建立新版本供廠商編輯並重新提交</li>
+  </ul>
+  <p>當有待處理的廠商發票時，<strong>審核佇列提示條</strong>會向 PM/AM 使用者提示數量與總金額。</p>
+
+  <h2 class="sub">發票詳情頁</h2>
+  <p>點擊任一發票即可檢視完整詳情：包含狀態、日期與金額的發票標頭資訊；明細項目表格；付款歷史；以及依您的角色與發票狀態顯示的操作按鈕（提交、核准、拒絕、要求修訂）。</p>
+
+  <h2 class="sub">記錄付款</h2>
+  <p>對於已核准的發票，經授權的使用者可以記錄付款：</p>
+  <ol class="step-list">
+    <li>開啟發票詳情頁</li>
+    <li>點擊<strong>記錄付款</strong></li>
+    <li>輸入付款金額與日期</li>
+    <li>全額付款後，發票狀態會自動更新為 PAID（已付款）</li>
+  </ol>
+</div>
+
+<!-- § 9 -->
+<div id="s9" class="section-break">
+  <div class="section-header">
+    <div class="section-number">9</div>
+    <h1 class="section-title">財務</h1>
+  </div>
+  <p>透過側邊欄的<strong>財務</strong>進入（僅限管理員、超級管理員、AM、PM）。</p>
+
+  <h2 class="sub">摘要卡片</h2>
+  <p>六張卡片提供財務概覽：</p>
+  <ul>
+    <li><strong>草稿</strong> — 草稿發票的總金額（管道中）</li>
+    <li><strong>已開立總額</strong> — 所有已發送的發票</li>
+    <li><strong>待審核</strong> — 等待核准的發票</li>
+    <li><strong>已核准</strong> — 已核准發票總額</li>
+    <li><strong>已付款</strong> — 已收到的付款總額</li>
+    <li><strong>未結清</strong> — 未付款餘額</li>
+  </ul>
+
+  <h2 class="sub">專案明細表</h2>
+  <p>詳細表格顯示每個專案的財務資料：專案名稱與計費方式、幣別、發票數量、草稿/已開立/待審核/已核准/已付款/未結清金額、付款進度條，以及底部合計列。</p>
+
+  <h2 class="sub">篩選</h2>
+  <ul>
+    <li><strong>廠商</strong> — 依廠商機構篩選</li>
+    <li><strong>客戶</strong> — 依客戶機構篩選</li>
+  </ul>
+</div>
+
+<!-- § 10 -->
+<div id="s10" class="section-break">
+  <div class="section-header">
+    <div class="section-number">10</div>
+    <h1 class="section-title">報告</h1>
+  </div>
+  <p>透過側邊欄的<strong>報告</strong>進入（僅限管理員、超級管理員、AM、PM）。</p>
+
+  <h2 class="sub">工時報告標籤頁</h2>
+  <ul>
+    <li><strong>摘要卡片：</strong>總工時、專案數量、記錄數量</li>
+    <li><strong>依專案分布：</strong>各專案工時及佔比長條圖</li>
+    <li><strong>紀錄日誌表：</strong>詳細工時記錄（最多 50 列）</li>
+    <li><strong>篩選：</strong>專案下拉選單、日期範圍（起訖日期）</li>
+  </ul>
+
+  <h2 class="sub">發票報告標籤頁</h2>
+  <ul>
+    <li><strong>摘要卡片：</strong>已開立總額、已收款、未結清</li>
+    <li><strong>依狀態分布：</strong>依狀態分組的發票金額（草稿、已發送、已付款、逾期）</li>
+    <li><strong>發票表格：</strong>完整清單，含已收款與餘額欄位</li>
+    <li><strong>篩選：</strong>客戶下拉選單、日期範圍（起訖日期）</li>
+  </ul>
+</div>
+
+<!-- § 11 -->
+<div id="s11" class="section-break">
+  <div class="section-header">
+    <div class="section-number">11</div>
+    <h1 class="section-title">管理面板</h1>
+  </div>
+  <p>透過側邊欄的<strong>管理面板</strong>進入（僅限管理員、超級管理員）。管理面板包含三個標籤頁：</p>
+
+  <h2 class="sub">使用者標籤頁</h2>
+  <p>管理系統中的所有使用者帳號。</p>
+  <h3 class="sub">建立使用者</h3>
+  <ol class="step-list">
+    <li>點擊<strong>+ 新增使用者</strong></li>
+    <li>填寫：姓名（必填）、電子郵件（必填）、密碼（必填）、職稱</li>
+    <li>選擇使用者類型：內部員工、廠商或客戶</li>
+    <li>若為廠商/客戶：選擇所屬機構</li>
+    <li>切換指派的角色（可指派多個角色）</li>
+    <li>設定啟用/未啟用狀態</li>
+  </ol>
+  <p><strong>可選角色：</strong>超級管理員、管理員、客戶經理、專案經理、團隊成員、承包商、廠商聯絡人、客戶</p>
+  <p><strong>使用者表格</strong>顯示：姓名與職稱、電子郵件、公司類型標籤（內部員工/廠商/客戶）、角色標籤、啟用狀態。</p>
+
+  <h2 class="sub">客戶標籤頁</h2>
+  <p>管理客戶機構。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>欄位</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td>名稱</td><td>必填</td></tr>
+        <tr><td>聯絡電子郵件</td><td></td></tr>
+        <tr><td>聯絡電話</td><td></td></tr>
+        <tr><td>地址</td><td></td></tr>
+        <tr><td>付款條件</td><td>預設："Net 30"（30 天內付款）</td></tr>
+        <tr><td>幣別</td><td>下拉選擇</td></tr>
+        <tr><td>啟用/未啟用</td><td>狀態切換</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sub">廠商標籤頁</h2>
+  <p>管理廠商機構。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>欄位</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr><td>名稱</td><td>必填</td></tr>
+        <tr><td>聯絡電子郵件</td><td></td></tr>
+        <tr><td>電話</td><td></td></tr>
+        <tr><td>地址</td><td></td></tr>
+        <tr><td>預設時薪</td><td>顯示為「$X/小時」</td></tr>
+        <tr><td>幣別</td><td></td></tr>
+        <tr><td>啟用/未啟用</td><td>狀態切換</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- § 12 -->
+<div id="s12" class="section-break">
+  <div class="section-header">
+    <div class="section-number">12</div>
+    <h1 class="section-title">個人檔案</h1>
+  </div>
+  <p>點擊側邊欄底部的<strong>編輯個人檔案</strong>，或前往<strong>個人檔案</strong>頁面。</p>
+
+  <h2 class="sub">可編輯欄位</h2>
+  <ul>
+    <li><strong>姓名</strong> — 您的顯示名稱</li>
+    <li><strong>電子郵件</strong> — 您的電子郵件地址（Google OAuth 使用者無法編輯）</li>
+    <li><strong>職稱</strong> — 您的職稱</li>
+  </ul>
+
+  <h2 class="sub">唯讀資訊</h2>
+  <ul>
+    <li><strong>使用者類型</strong>標籤（內部員工、廠商或客戶）</li>
+    <li><strong>公司名稱</strong>（廠商/客戶使用者顯示）</li>
+    <li><strong>驗證方式</strong>標籤（本地帳號或 Google）</li>
+    <li><strong>角色</strong> — 您所指派的角色標籤</li>
+  </ul>
+
+  <h2 class="sub">變更密碼（僅限本地帳號）</h2>
+  <ol class="step-list">
+    <li>輸入您的<strong>目前密碼</strong></li>
+    <li>輸入您的<strong>新密碼</strong>（至少 8 個字元）</li>
+    <li><strong>確認</strong>新密碼</li>
+    <li>點擊<strong>更新密碼</strong></li>
+  </ol>
+  <p>Google OAuth 使用者無法變更密碼，也不會看到此區塊。</p>
+</div>
+
+<!-- § 13 -->
+<div id="s13" class="section-break">
+  <div class="section-header">
+    <div class="section-number">13</div>
+    <h1 class="section-title">語言支援</h1>
+  </div>
+  <p>PM Tool 支援三種語言。使用頁首右上角的按鈕切換——您的選擇會立即套用至整個應用程式。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>按鈕</th><th>語言</th></tr></thead>
+      <tbody>
+        <tr><td><strong>EN</strong></td><td>英文</td></tr>
+        <tr><td><strong>簡</strong></td><td>簡體中文（zh-CN）</td></tr>
+        <tr><td><strong>繁</strong></td><td>繁體中文（zh-TW）</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- /content -->
+</body>
+</html>

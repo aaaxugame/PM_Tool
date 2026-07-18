@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PM Tool – 用户手册</title>
+<style>
+  /* ── Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: "Segoe UI", "Microsoft YaHei", "PingFang SC", -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    line-height: 1.75;
+    color: #1a1a2e;
+    background: #fff;
+    padding: 0;
+  }
+
+  /* ── Cover page ── */
+  .cover {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    min-height: 800px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 60%, #3b82f6 100%);
+    color: #fff;
+    text-align: center;
+    page-break-after: always;
+    padding: 60px 40px;
+  }
+  .cover-logo {
+    width: 72px;
+    height: 72px;
+    background: rgba(255,255,255,0.18);
+    border-radius: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 28px;
+    font-size: 36px;
+  }
+  .cover h1 {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin-bottom: 10px;
+  }
+  .cover h2 {
+    font-size: 20px;
+    font-weight: 400;
+    opacity: 0.85;
+    margin-bottom: 40px;
+  }
+  .cover-meta {
+    font-size: 13px;
+    opacity: 0.7;
+    margin-top: auto;
+  }
+  .cover-divider {
+    width: 60px;
+    height: 3px;
+    background: rgba(255,255,255,0.5);
+    border-radius: 2px;
+    margin: 0 auto 40px;
+  }
+
+  /* ── TOC page ── */
+  .toc-page {
+    padding: 60px 80px;
+    page-break-after: always;
+  }
+  .toc-page h2 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e3a5f;
+    border-bottom: 3px solid #2563eb;
+    padding-bottom: 10px;
+    margin-bottom: 28px;
+  }
+  .toc-list { list-style: none; }
+  .toc-list li {
+    display: flex;
+    align-items: baseline;
+    padding: 6px 0;
+    font-size: 13.5px;
+  }
+  .toc-list li::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px dotted #c7d2e0;
+    margin: 0 10px;
+    position: relative;
+    top: -2px;
+  }
+  .toc-list a {
+    color: #1e3a5f;
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .toc-list a:hover { color: #2563eb; }
+  .toc-page-num { color: #6b7280; font-size: 12px; }
+
+  /* ── Content pages ── */
+  .content {
+    padding: 56px 80px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  /* ── Section heading ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin: 0 0 28px;
+    padding-bottom: 14px;
+    border-bottom: 2px solid #e5eaf3;
+    page-break-after: avoid;
+  }
+  .section-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: #2563eb;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    border-radius: 10px;
+    flex-shrink: 0;
+  }
+  h1.section-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1e3a5f;
+  }
+
+  /* ── Headings inside sections ── */
+  h2.sub {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1e3a5f;
+    margin: 28px 0 10px;
+    page-break-after: avoid;
+  }
+  h3.sub {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: #374151;
+    margin: 18px 0 8px;
+    page-break-after: avoid;
+  }
+
+  /* ── Body text ── */
+  p { margin: 0 0 10px; }
+
+  /* ── Tables ── */
+  .table-wrap { overflow-x: auto; margin: 12px 0 18px; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+  }
+  thead tr { background: #1e3a5f; color: #fff; }
+  thead th {
+    padding: 9px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.3px;
+  }
+  tbody tr:nth-child(even) { background: #f0f4fb; }
+  tbody tr:hover { background: #dbeafe; }
+  tbody td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #e5eaf3;
+    vertical-align: top;
+  }
+  td strong { color: #1e3a5f; }
+
+  /* ── Code / flow ── */
+  code {
+    font-family: "Cascadia Code", "Fira Code", "Courier New", monospace;
+    font-size: 12px;
+    background: #f1f5f9;
+    color: #1e3a5f;
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
+  pre {
+    background: #1e293b;
+    color: #e2e8f0;
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-size: 12px;
+    font-family: "Cascadia Code", "Fira Code", monospace;
+    margin: 12px 0 18px;
+    overflow-x: auto;
+    page-break-inside: avoid;
+  }
+
+  /* ── Blockquote / callout ── */
+  blockquote {
+    background: #eff6ff;
+    border-left: 4px solid #2563eb;
+    border-radius: 0 6px 6px 0;
+    padding: 12px 16px;
+    margin: 12px 0 18px;
+    color: #1e3a5f;
+    font-style: italic;
+    font-size: 12.5px;
+  }
+
+  /* ── Lists ── */
+  ul, ol {
+    padding-left: 22px;
+    margin: 8px 0 14px;
+  }
+  li { margin-bottom: 4px; }
+  li strong { color: #1e3a5f; }
+
+  /* ── Role badges ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    margin: 1px 2px;
+  }
+  .badge-blue   { background: #dbeafe; color: #1d4ed8; }
+  .badge-green  { background: #dcfce7; color: #15803d; }
+  .badge-purple { background: #ede9fe; color: #7c3aed; }
+  .badge-orange { background: #ffedd5; color: #c2410c; }
+  .badge-gray   { background: #f1f5f9; color: #475569; }
+
+  /* ── Info callout box ── */
+  .info-box {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 14px 0;
+    font-size: 12.5px;
+    color: #1e40af;
+  }
+  .info-box strong { display: block; margin-bottom: 4px; }
+
+  /* ── Step list ── */
+  .step-list { list-style: none; padding-left: 0; counter-reset: steps; }
+  .step-list li {
+    counter-increment: steps;
+    padding: 8px 0 8px 44px;
+    position: relative;
+    border-bottom: 1px solid #f1f5f9;
+  }
+  .step-list li::before {
+    content: counter(steps);
+    position: absolute;
+    left: 0;
+    top: 8px;
+    width: 28px;
+    height: 28px;
+    background: #2563eb;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  /* ── Section break ── */
+  .section-break { page-break-before: always; padding-top: 56px; }
+
+  /* ── Print ── */
+  @media print {
+    body { font-size: 12px; }
+    .cover { page-break-after: always; }
+    .toc-page { page-break-after: always; }
+    .section-break { page-break-before: always; }
+    .section-header { page-break-after: avoid; }
+    h2.sub, h3.sub { page-break-after: avoid; }
+    pre, table, blockquote { page-break-inside: avoid; }
+    a { color: inherit; text-decoration: none; }
+    @page {
+      margin: 18mm 18mm 18mm 18mm;
+    }
+    @page :first { margin: 0; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     COVER
+══════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-logo">📋</div>
+  <h1>PM Tool</h1>
+  <h2>用户手册</h2>
+  <div class="cover-divider"></div>
+  <p style="opacity:.8;font-size:15px;margin-bottom:8px;">面向所有角色与功能的完整指南</p>
+  <p style="opacity:.6;font-size:13px;">版本 1.0 &nbsp;·&nbsp; 2026 年 6 月</p>
+  <div class="cover-meta" style="margin-top:60px;">
+    <p>支持 EN / 简 / 繁 &nbsp;·&nbsp; 共 13 个章节</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     TABLE OF CONTENTS
+══════════════════════════════════════ -->
+<div class="toc-page">
+  <h2>目录</h2>
+  <ul class="toc-list">
+    <li><a href="#s1">1. 快速入门</a></li>
+    <li><a href="#s2">2. 用户角色与权限</a></li>
+    <li><a href="#s3">3. 仪表盘</a></li>
+    <li><a href="#s4">4. 项目</a></li>
+    <li><a href="#s5">5. 任务</a></li>
+    <li><a href="#s6">6. 工时记录</a></li>
+    <li><a href="#s7">7. 工时表</a></li>
+    <li><a href="#s8">8. 发票</a></li>
+    <li><a href="#s9">9. 财务</a></li>
+    <li><a href="#s10">10. 报表</a></li>
+    <li><a href="#s11">11. 管理面板</a></li>
+    <li><a href="#s12">12. 个人资料</a></li>
+    <li><a href="#s13">13. 语言支持</a></li>
+  </ul>
+</div>
+
+<!-- ══════════════════════════════════════
+     CONTENT
+══════════════════════════════════════ -->
+<div class="content">
+
+<!-- § 1 -->
+<div id="s1">
+  <div class="section-header">
+    <div class="section-number">1</div>
+    <h1 class="section-title">快速入门</h1>
+  </div>
+
+  <h2 class="sub">登录</h2>
+  <p>打开应用网址，使用以下两种方式之一登录：</p>
+  <ul>
+    <li><strong>邮箱与密码</strong> — 输入邮箱和密码，然后点击<strong>登录</strong>。</li>
+    <li><strong>Google OAuth</strong> — 点击<strong>使用 Google 登录</strong>，通过您的 Google 账号进行身份验证。</li>
+  </ul>
+  <p>如果您的账号尚未分配角色，仪表盘上会出现一条警告提示：</p>
+  <blockquote>"您的账号尚未分配角色，请联系管理员获取访问权限。"</blockquote>
+
+  <h2 class="sub">导航</h2>
+  <p>左侧边栏提供所有功能的入口，具体显示项取决于您的角色：</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>分组</th><th>菜单项</th><th>可见对象</th></tr></thead>
+      <tbody>
+        <tr><td>—</td><td>仪表盘</td><td>所有人</td></tr>
+        <tr><td>管理</td><td>项目</td><td>所有人</td></tr>
+        <tr><td>管理</td><td>任务</td><td>内部员工 + 供应商</td></tr>
+        <tr><td>工时与账单</td><td>工时记录</td><td>内部员工 + 供应商</td></tr>
+        <tr><td>工时与账单</td><td>工时表</td><td>内部员工 + 供应商</td></tr>
+        <tr><td>工时与账单</td><td>发票</td><td>所有人</td></tr>
+        <tr><td>工时与账单</td><td>财务</td><td>管理员、超级管理员、AM、PM</td></tr>
+        <tr><td>工时与账单</td><td>报表</td><td>管理员、超级管理员、AM、PM</td></tr>
+        <tr><td>管理后台</td><td>管理面板</td><td>管理员、超级管理员</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>侧边栏底部显示您的用户信息，包括姓名、职位、邮箱和用户类型（内部员工、供应商或客户）。点击<strong>编辑资料</strong>可进入个人资料页面。</p>
+</div>
+
+<!-- § 2 -->
+<div id="s2" class="section-break">
+  <div class="section-header">
+    <div class="section-number">2</div>
+    <h1 class="section-title">用户角色与权限</h1>
+  </div>
+  <p>PM Tool 拥有三种用户类型和八个角色：</p>
+
+  <h2 class="sub">内部用户</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>角色</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><strong>超级管理员（Super Admin）</strong></td><td>拥有完整系统权限，包括管理面板和所有管理功能</td></tr>
+        <tr><td><strong>管理员（Admin）</strong></td><td>拥有完整系统权限，包括管理面板和所有管理功能</td></tr>
+        <tr><td><strong>客户经理（Account Manager，AM）</strong></td><td>管理客户关系、项目、发票、财务和报表</td></tr>
+        <tr><td><strong>项目经理（Project Manager，PM）</strong></td><td>管理项目、任务、工时表、发票、财务和报表</td></tr>
+        <tr><td><strong>团队成员（Team Member）</strong></td><td>处理分配的任务、记录工时、提交工时表</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sub">供应商用户</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>角色</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><strong>承包商（Contractor）</strong></td><td>记录工时、提交工时表、查看分配的项目</td></tr>
+        <tr><td><strong>供应商联系人（Vendor Contact）</strong></td><td>管理供应商关系、提交项目申请和供应商发票</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sub">客户用户</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>角色</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td><strong>客户（Client）</strong></td><td>查看自己的项目，审核并批准/拒绝项目提案，审核并批准发票</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sub">权限总览</h2>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>操作</th><th>超级管理员</th><th>管理员</th><th>AM</th><th>PM</th>
+          <th>团队成员</th><th>承包商</th><th>供应商联系人</th><th>客户</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>创建/编辑/删除项目</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>仅可申请</td><td>—</td></tr>
+        <tr><td>创建/编辑/删除里程碑</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>创建/编辑/删除任务</td><td>任意项目</td><td>任意项目</td><td>任意项目</td><td>任意项目</td><td>仅限已分配项目</td><td>仅限已分配项目</td><td>仅限已分配项目</td><td>—</td></tr>
+        <tr><td>记录工时</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td></tr>
+        <tr><td>提交工时表</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td></tr>
+        <tr><td>审批/驳回工时表</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>创建客户发票</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>创建供应商发票</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✓</td><td>—</td></tr>
+        <tr><td>批准发票</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td><td>✓</td></tr>
+        <tr><td>发送/修订项目提案</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>批准/拒绝/要求修订提案</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>✓（仅限本方项目）</td></tr>
+        <tr><td>发起变更请求</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>批准/拒绝/要求修订变更请求</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>✓（仅限本方项目）</td></tr>
+        <tr><td>查看财务</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>查看报表</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>管理面板</td><td>✓</td><td>✓</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- § 3 -->
+<div id="s3" class="section-break">
+  <div class="section-header">
+    <div class="section-number">3</div>
+    <h1 class="section-title">仪表盘</h1>
+  </div>
+  <p>登录后，每个角色都会看到为其定制的仪表盘。</p>
+
+  <h2 class="sub">客户经理 / 管理员 / 超级管理员仪表盘</h2>
+  <ul>
+    <li><strong>统计卡片：</strong>项目总数、进行中项目数、客户总数、合同总金额</li>
+    <li><strong>收入管道：</strong>已开票、已收款、未结清金额，并附带待审核报价和审批的提示标签</li>
+    <li><strong>客户项目组合：</strong>表格展示每个客户的项目数量、进行中项目数和合同金额</li>
+    <li><strong>需处理的发票：</strong>需要审核的发票列表，附带状态标签</li>
+    <li><strong>待处理供应商报价：</strong>等待审批的报价，附带批准/拒绝操作</li>
+    <li><strong>按状态划分的项目：</strong>按当前状态划分的项目分布</li>
+  </ul>
+
+  <h2 class="sub">项目经理仪表盘</h2>
+  <ul>
+    <li><strong>统计卡片：</strong>我的项目、进行中项目、本周到期任务、待处理工时表</li>
+    <li><strong>待处理供应商项目申请：</strong>供应商提交的项目申请，附带批准/拒绝按钮</li>
+    <li><strong>我的项目：</strong>已分配项目列表，附带健康度指标（正常、有风险、已延迟）</li>
+    <li><strong>任务分布：</strong>按状态划分的任务分布（待办、进行中、审核中、已完成）</li>
+    <li><strong>待处理报价：</strong>等待审核的供应商报价</li>
+  </ul>
+
+  <h2 class="sub">供应商仪表盘</h2>
+  <ul>
+    <li><strong>供应商信息卡：</strong>供应商名称、联系方式、项目数量</li>
+    <li><strong>指标卡片：</strong>合同总金额、已开票、已付款、未结清金额</li>
+    <li><strong>进行中项目：</strong>当前项目列表，附带状态和健康度指标</li>
+    <li><strong>报价：</strong>管理供应商报价（创建、提交、删除），并跟踪状态（待处理、已提交、已批准、已拒绝）</li>
+    <li><strong>最近发票：</strong>最新的供应商发票及其状态</li>
+  </ul>
+
+  <h2 class="sub">客户仪表盘</h2>
+  <ul>
+    <li><strong>账单摘要：</strong>合同金额、已开票、已付款、未结清金额</li>
+    <li><strong>我的项目：</strong>项目卡片网格，显示状态、审批状态、任务进度条、PM/AM 负责人和截止日期</li>
+    <li><strong>最近发票：</strong>最新发票列表及状态标签</li>
+    <li><strong>项目时间线：</strong>进行中项目里程碑总览</li>
+  </ul>
+
+  <h2 class="sub">团队成员 / 通用仪表盘</h2>
+  <ul>
+    <li><strong>统计卡片：</strong>进行中项目、未完成任务、待处理工时表、本周工时、未结清发票</li>
+    <li><strong>最近项目：</strong>快速跳转到项目及其任务数量</li>
+    <li><strong>最近发票：</strong>最近发票列表及状态</li>
+  </ul>
+</div>
+
+<!-- § 4 -->
+<div id="s4" class="section-break">
+  <div class="section-header">
+    <div class="section-number">4</div>
+    <h1 class="section-title">项目</h1>
+  </div>
+  <p>通过侧边栏的<strong>项目</strong>进入。</p>
+
+  <h2 class="sub">标签页（因角色而异）</h2>
+  <h3 class="sub">内部用户 — 4 个标签页</h3>
+  <ol>
+    <li><strong>我的项目</strong> — 分配给您的项目（作为 PM、AM 或团队成员）</li>
+    <li><strong>所有项目</strong> — 系统中的所有项目，支持按 PM、AM、客户和供应商筛选</li>
+    <li><strong>供应商申请</strong> — 供应商提交、等待批准的项目申请</li>
+    <li><strong>已归档项目</strong> — 状态为 ARCHIVED（已归档）的项目</li>
+  </ol>
+  <h3 class="sub">供应商用户 — 3 个标签页</h3>
+  <ol>
+    <li><strong>当前项目</strong> — 分配给您供应商的进行中项目</li>
+    <li><strong>我的申请</strong> — 您提交的项目申请及其批准状态</li>
+    <li><strong>已归档项目</strong> — 已归档的供应商项目</li>
+  </ol>
+  <h3 class="sub">客户用户 — 1 个标签页</h3>
+  <ol>
+    <li><strong>我的项目</strong> — 与您所在组织关联的项目</li>
+  </ol>
+
+  <h2 class="sub">创建项目</h2>
+  <p>点击右上角的<strong>+ 创建</strong>，填写项目表单：</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>字段</th><th>是否必填</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>名称</td><td>是</td><td>项目名称</td></tr>
+        <tr><td>类别</td><td>否</td><td>项目类别</td></tr>
+        <tr><td>描述</td><td>否</td><td>项目详情</td></tr>
+        <tr><td>状态</td><td>否</td><td>DRAFT（草稿）、ACTIVE（进行中）、ON_HOLD（暂停）、COMPLETED（已完成）、CANCELLED（已取消）、ARCHIVED（已归档）</td></tr>
+        <tr><td>项目类型</td><td>否</td><td>INTERNAL（内部）或其他类型</td></tr>
+        <tr><td>优先级</td><td>否</td><td>LOW（低）、MEDIUM（中）、HIGH（高）、URGENT（紧急）</td></tr>
+        <tr><td>计费方式</td><td>否</td><td>按工时计费、固定价格、按里程碑、混合</td></tr>
+        <tr><td>风险等级</td><td>否</td><td>项目风险评估</td></tr>
+        <tr><td>客户</td><td>否</td><td>分配客户组织</td></tr>
+        <tr><td>供应商</td><td>否</td><td>分配供应商组织</td></tr>
+        <tr><td>项目经理</td><td>否</td><td>分配 PM</td></tr>
+        <tr><td>客户经理</td><td>否</td><td>分配 AM</td></tr>
+        <tr><td>团队成员</td><td>否</td><td>多选团队成员</td></tr>
+        <tr><td>开始日期</td><td>否</td><td>项目开始日期</td></tr>
+        <tr><td>结束日期</td><td>否</td><td>项目结束日期</td></tr>
+        <tr><td>预估成本</td><td>否</td><td>预计项目成本</td></tr>
+        <tr><td>预估工时</td><td>否</td><td>预计总工时</td></tr>
+        <tr><td>预计人数</td><td>否</td><td>所需工作人员数量</td></tr>
+        <tr><td>所需技能</td><td>否</td><td>所需技能</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p>使用<strong>保存为草稿</strong>保存但不激活，或使用<strong>保存</strong>直接创建项目。</p>
+
+  <h2 class="sub">供应商项目申请</h2>
+  <p>供应商可点击<strong>+ 新建申请</strong>提交项目申请。申请表单包括：名称、类别、描述、开始/结束日期、预计人数、所需技能、计费方式、预估成本和预估工时。</p>
+  <p>申请可保存为草稿或提交。提交后，PM/AM/管理员可在"供应商申请"标签页或其仪表盘中<strong>批准</strong>或<strong>拒绝</strong>该申请。</p>
+
+  <h2 class="sub">客户提案流程</h2>
+  <p>对于已分配客户的项目，在项目正式激活前，必须先向客户提出范围与计费条款的提案并获得批准。这与上文的"供应商项目申请"不同——它管理的是客户对成本的确认，而非供应商的接单申请。</p>
+  <ol>
+    <li><strong>制定提案</strong>（PM、AM、管理员、超级管理员）— 设置项目的计费方式、预估成本、预估工时，若为按工时计费或混合计费，还需设置<strong>时薪</strong>。为按里程碑或混合计费的项目添加里程碑，并设置<strong>合同金额</strong>。</li>
+    <li><strong>发送提案</strong> — 在项目详情页点击<strong>发送提案</strong>。客户会收到邮件通知。如果必须设置时薪但尚未设置，发送将被阻止并提示错误。</li>
+    <li><strong>客户审核</strong> — 客户打开项目后会看到提案面板，可以<strong>批准</strong>、<strong>拒绝</strong>（需填写理由）或<strong>要求修订</strong>（附带备注）。</li>
+    <li><strong>批准后</strong> — 项目自动进入 ACTIVE（进行中）状态，计费方式、预估成本、预估工时、时薪，以及每个里程碑的合同金额、名称和截止日期均被锁定，无法再编辑。</li>
+    <li><strong>发起新修订</strong> — PM/AM/管理员可点击<strong>发起新修订</strong>解锁这些字段并将提案版本号加一，随后编辑并重新发送以待批准。</li>
+  </ol>
+  <p><strong>提案状态：</strong>DRAFT（草稿）→ SENT（已发送）→ APPROVED（已批准）/ DECLINED（已拒绝）/ REVISION_REQUESTED（要求修订）。从后三种状态中的任意一种发起新修订，提案都会回到 DRAFT 状态，且版本号递增。</p>
+  <p>客户只能查看和处理属于自己组织的项目提案。</p>
+  <p><strong>提案历史：</strong>每次发送提案时，系统都会永久记录当时的条款与里程碑快照，以及客户的响应和任何评论。点击版本标签旁的<strong>查看历史</strong>可打开时间线，查看每一个历史版本——发送了什么内容、谁发送的、客户如何响应，以及任何拒绝理由或修订备注。任何后续修订都不会删除或覆盖历史记录；即使提案已被批准并再次修订，所有早期版本依然可见。内部员工和客户均可查看完整历史。</p>
+
+  <h2 class="sub">变更请求</h2>
+  <p>项目提案<strong>批准</strong>后，客户可能会要求在原有范围之外增加额外工作（例如额外的功能或交付物）。为避免重新打开并再次锁定整个提案，系统使用独立的<strong>变更请求</strong>来处理这类需求：</p>
+  <ol>
+    <li><strong>发起变更请求</strong>（PM、AM、管理员、超级管理员）— 在项目详情页点击<strong>+ 新建变更请求</strong>，填写标题、可选的描述、<strong>追加成本</strong>，并可选择添加一个或多个新里程碑（名称、截止日期、金额）。</li>
+    <li><strong>客户审核</strong> — 客户会在项目页面看到该变更请求及其他历史请求，可以<strong>批准</strong>、<strong>拒绝</strong>（需填写理由）或<strong>要求修订</strong>（附带备注）——流程与提案审核相同。</li>
+    <li><strong>批准后</strong> — 变更请求中列出的所有里程碑会自动创建到项目中，项目的预估成本增加相应的追加成本。原已批准的提案及其历史记录不受影响。</li>
+    <li><strong>被拒绝或要求修订后</strong> — 该变更请求会永久保留，并显示客户的响应和备注。若需处理反馈，需发起新的变更请求；原请求不会被编辑或删除。</li>
+  </ol>
+  <p>一个项目在其生命周期内可以拥有任意数量的变更请求，每一条的完整历史——包括被拒绝或被取代的记录——都会一直保留可见。</p>
+
+  <h2 class="sub">项目详情页</h2>
+  <p>点击任意项目名称打开详情页，该页面包含四个标签页：</p>
+  <ol>
+    <li><strong>工作</strong> — 管理里程碑和任务。创建/编辑/删除里程碑仅限超级管理员、管理员、AM 和 PM。每个里程碑可设置<strong>合同金额</strong>，用于在标记完成后向客户计费（见上文"客户提案流程"）；一旦项目提案获批，该里程碑的名称、截止日期和合同金额均被锁定。创建/编辑/删除任务（以及点击状态标签快速切换任务状态）对管理者在任意项目中均可用，团队成员、承包商和供应商联系人仅限于其被分配的项目。此标签页还可查看团队成员面板。</li>
+    <li><strong>报价</strong> — 该项目的供应商报价（查看、创建和管理；状态包括：PENDING 待处理、SUBMITTED 已提交、APPROVED 已批准、REJECTED 已拒绝）</li>
+    <li><strong>预算</strong> — 项目预算跟踪；创建和管理预算明细项</li>
+    <li><strong>文档</strong> — 上传和管理项目文档</li>
+  </ol>
+</div>
+
+<!-- § 5 -->
+<div id="s5" class="section-break">
+  <div class="section-header">
+    <div class="section-number">5</div>
+    <h1 class="section-title">任务</h1>
+  </div>
+  <p>通过侧边栏的<strong>任务</strong>进入（仅限内部员工和供应商用户）。</p>
+
+  <h2 class="sub">查看任务</h2>
+  <p>任务可以以<strong>表格</strong>视图查看（带状态筛选标签：<strong>全部</strong>、<strong>待办</strong>、<strong>进行中</strong>、<strong>审核中</strong>、<strong>已完成</strong>），也可以以<strong>看板</strong>视图查看（看板风格的列布局）。使用<strong>项目</strong>下拉菜单按项目筛选。该视图会显示所有项目中的任务，无论是否分配给您——浏览不受限制，但编辑权限受限（见下文）。</p>
+
+  <h2 class="sub">创建任务</h2>
+  <p>点击<strong>+ 创建</strong>并填写：</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>字段</th><th>是否必填</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>名称</td><td>是</td><td>任务名称</td></tr>
+        <tr><td>描述</td><td>否</td><td>任务详情</td></tr>
+        <tr><td>状态</td><td>否</td><td>TODO（待办）、IN_PROGRESS（进行中）、REVIEW（审核中）、DONE（已完成）</td></tr>
+        <tr><td>优先级</td><td>否</td><td>LOW（低）、MEDIUM（中）、HIGH（高）、URGENT（紧急）</td></tr>
+        <tr><td>项目</td><td>是</td><td>该任务所属的项目</td></tr>
+        <tr><td>里程碑</td><td>否</td><td>关联到某个项目里程碑</td></tr>
+        <tr><td>负责人</td><td>否</td><td>被分配该任务的用户</td></tr>
+        <tr><td>截止日期</td><td>否</td><td>任务期限</td></tr>
+        <tr><td>预估工时</td><td>否</td><td>工时估算</td></tr>
+        <tr><td>是否计费</td><td>否</td><td>切换该任务是否计费</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p><strong>"项目"和"负责人"选项范围取决于您的权限：</strong>超级管理员/管理员/AM/PM 可以看到所有项目，并可以分配给与所选项目相关的任何人。团队成员、承包商和供应商联系人只能看到分配给自己的项目，且只能分配给与该项目相关的人员。</p>
+
+  <h2 class="sub">快速切换状态</h2>
+  <p>点击任意任务上的状态标签，可依次循环切换：<strong>TODO（待办）→ IN_PROGRESS（进行中）→ REVIEW（审核中）→ DONE（已完成）</strong>（表格视图），或在看板视图中拖拽卡片到不同列。仅当您有权管理该任务时才可用——超出您分配项目范围的任务无法编辑、删除或更改状态。</p>
+</div>
+
+<!-- § 6 -->
+<div id="s6" class="section-break">
+  <div class="section-header">
+    <div class="section-number">6</div>
+    <h1 class="section-title">工时记录</h1>
+  </div>
+  <p>通过侧边栏的<strong>工时记录</strong>进入（仅限内部员工和供应商用户）。</p>
+
+  <h2 class="sub">记录工时</h2>
+  <p>工时日志显示您所有的工时记录。点击<strong>+ 新建记录</strong>创建一条：</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>字段</th><th>是否必填</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>日期</td><td>是</td><td>工作日期</td></tr>
+        <tr><td>项目</td><td>是</td><td>所从事的项目</td></tr>
+        <tr><td>任务</td><td>否</td><td>具体任务</td></tr>
+        <tr><td>描述</td><td>否</td><td>工作内容说明</td></tr>
+        <tr><td>开始时间</td><td>是</td><td>开始工作的时间</td></tr>
+        <tr><td>结束时间</td><td>是</td><td>停止工作的时间</td></tr>
+        <tr><td>时长</td><td>自动</td><td>根据开始/结束时间自动计算</td></tr>
+        <tr><td>是否计费</td><td>否</td><td>该时长是否计费</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sub">实时计时器</h2>
+  <p>使用<strong>开始计时</strong>按钮实时记录工时。完成后点击<strong>停止</strong>，开始/结束时间会自动填入记录表单。</p>
+
+  <h2 class="sub">筛选</h2>
+  <p>可按<strong>项目</strong>或<strong>日期范围</strong>（开始和结束日期）筛选您的工时记录。</p>
+
+  <h2 class="sub">已锁定记录</h2>
+  <p>已包含在已提交工时表中的工时记录会被锁定，无法编辑或删除，并会显示锁形图标。</p>
+</div>
+
+<!-- § 7 -->
+<div id="s7" class="section-break">
+  <div class="section-header">
+    <div class="section-number">7</div>
+    <h1 class="section-title">工时表</h1>
+  </div>
+  <p>通过侧边栏的<strong>工时表</strong>进入（仅限内部员工和供应商用户）。</p>
+
+  <h2 class="sub">我的工时表</h2>
+  <p>创建工时表，将您的工时记录打包提交以待审批。</p>
+  <ol class="step-list">
+    <li>点击<strong>+ 新建工时表</strong></li>
+    <li>选择<strong>周期开始</strong>和<strong>周期结束</strong>日期</li>
+    <li>系统会自动纳入匹配的工时记录</li>
+    <li><strong>提交</strong>工时表以待审批，或保存为草稿</li>
+  </ol>
+  <h3 class="sub">工时表状态</h3>
+  <ul>
+    <li><strong>DRAFT（草稿）</strong> — 尚未提交；可编辑或删除</li>
+    <li><strong>SUBMITTED（已提交）</strong> — 等待审核；记录已锁定</li>
+    <li><strong>APPROVED（已批准）</strong> — 已由审核人批准</li>
+    <li><strong>REJECTED（已拒绝）</strong> — 已附理由被拒；请查看反馈后重新提交</li>
+  </ul>
+  <p>点击任意工时表可展开查看其中所有关联的工时记录及工时数。</p>
+
+  <h2 class="sub">审核工时表（PM、AM、管理员、超级管理员）</h2>
+  <p><strong>待审核</strong>区域显示所有团队成员提交的工时表。</p>
+  <ol class="step-list">
+    <li>点击某个工时表以展开并审核其工时记录</li>
+    <li>点击<strong>批准</strong>以批准该工时表</li>
+    <li>点击<strong>拒绝</strong>并填写理由以退回</li>
+  </ol>
+  <p><strong>已批准工时表</strong>区域显示之前已批准的工时表，包括总工时、计费工时以及审批人。</p>
+</div>
+
+<!-- § 8 -->
+<div id="s8" class="section-break">
+  <div class="section-header">
+    <div class="section-number">8</div>
+    <h1 class="section-title">发票</h1>
+  </div>
+  <p>通过侧边栏的<strong>发票</strong>进入（所有人可见）。</p>
+
+  <h2 class="sub">标签页</h2>
+  <ul>
+    <li><strong>客户发票</strong> — 发送给客户的发票（内部员工和客户可见）</li>
+    <li><strong>供应商发票</strong> — 来自供应商的发票（内部员工和供应商可见）</li>
+  </ul>
+  <p>使用<strong>状态</strong>筛选器按当前状态筛选发票。</p>
+
+  <h2 class="sub">客户发票</h2>
+  <h3 class="sub">创建客户发票（PM、AM、管理员）</h3>
+  <ol class="step-list">
+    <li>点击<strong>+ 新建客户发票</strong></li>
+    <li>选择<strong>项目</strong>和<strong>客户</strong></li>
+    <li>添加明细项，填写描述、数量、单价</li>
+    <li>设置税率和币种（自动从客户设置中带入）</li>
+    <li>保存为草稿</li>
+  </ol>
+  <h3 class="sub">从里程碑生成（PM、AM、管理员）</h3>
+  <p>对于按里程碑或混合计费的项目，点击<strong>⚡ 从里程碑生成</strong>并选择项目，系统会自动创建一张草稿发票，为每个已完成的里程碑生成一条明细项，并使用该里程碑的合同金额。已在已提交、已批准或已付款发票中向客户计费过的里程碑不会重复计入。</p>
+  <h3 class="sub">发票生命周期</h3>
+  <pre>DRAFT（草稿）──► SENT（已发送）──► APPROVED（已批准）──► PAID（已付款）
+                                              └──► OVERDUE（逾期，若超过到期日）</pre>
+  <ul>
+    <li><strong>DRAFT（草稿）</strong> — 可编辑和删除</li>
+    <li><strong>SENT（已发送）</strong> — 已发送给客户以待审核</li>
+    <li><strong>APPROVED（已批准）</strong> — 客户或 AM 已批准该发票</li>
+    <li><strong>PAID（已付款）</strong> — 已收到付款</li>
+    <li><strong>OVERDUE（逾期）</strong> — 已超过到期日仍未付款</li>
+  </ul>
+
+  <h2 class="sub">供应商发票</h2>
+  <h3 class="sub">创建供应商发票（供应商联系人）</h3>
+  <ol class="step-list">
+    <li>点击<strong>+ 创建发票</strong></li>
+    <li>从已批准的报价中选择（自动带入详细信息）</li>
+    <li>添加明细项</li>
+    <li>保存为草稿或提交</li>
+  </ol>
+  <h3 class="sub">供应商发票生命周期</h3>
+  <pre>DRAFT（草稿）──► SUBMITTED（已提交）──► APPROVED（已批准）──► PAID（已付款）
+                              └──► REJECTED（已拒绝）
+                              └──► REVISION_REQUESTED（要求修订）──►（创建新版本）</pre>
+  <ul>
+    <li><strong>SUBMITTED（已提交）</strong> — 等待 PM/AM 审核</li>
+    <li><strong>APPROVED（已批准）</strong> — PM/AM 已批准该发票</li>
+    <li><strong>REJECTED（已拒绝）</strong> — AM 已拒绝该发票（附带备注）</li>
+    <li><strong>REVISION_REQUESTED（要求修订）</strong> — PM/AM 要求修改；系统会创建一个新版本供供应商编辑并重新提交</li>
+  </ul>
+  <p>当有待处理的供应商发票时，<strong>审核队列提示条</strong>会向 PM/AM 用户提示数量和总金额。</p>
+
+  <h2 class="sub">发票详情页</h2>
+  <p>点击任意发票可查看完整详情：包含状态、日期和金额的发票头信息；明细项表格；付款历史；以及根据您的角色和发票状态显示的操作按钮（提交、批准、拒绝、要求修订）。</p>
+
+  <h2 class="sub">记录付款</h2>
+  <p>对于已批准的发票，授权用户可以记录付款：</p>
+  <ol class="step-list">
+    <li>打开发票详情页</li>
+    <li>点击<strong>记录付款</strong></li>
+    <li>输入付款金额和日期</li>
+    <li>全额付款后，发票状态自动更新为 PAID（已付款）</li>
+  </ol>
+</div>
+
+<!-- § 9 -->
+<div id="s9" class="section-break">
+  <div class="section-header">
+    <div class="section-number">9</div>
+    <h1 class="section-title">财务</h1>
+  </div>
+  <p>通过侧边栏的<strong>财务</strong>进入（仅限管理员、超级管理员、AM、PM）。</p>
+
+  <h2 class="sub">摘要卡片</h2>
+  <p>六张卡片提供财务概览：</p>
+  <ul>
+    <li><strong>草稿</strong> — 草稿发票的总金额（管道中）</li>
+    <li><strong>已开票总额</strong> — 所有已发送的发票</li>
+    <li><strong>待审核</strong> — 等待批准的发票</li>
+    <li><strong>已批准</strong> — 已批准发票总额</li>
+    <li><strong>已付款</strong> — 已收到的付款总额</li>
+    <li><strong>未结清</strong> — 未付款余额</li>
+  </ul>
+
+  <h2 class="sub">项目明细表</h2>
+  <p>详细表格展示每个项目的财务数据：项目名称和计费方式、币种、发票数量、草稿/已开票/待审核/已批准/已付款/未结清金额、付款进度条，以及底部合计行。</p>
+
+  <h2 class="sub">筛选</h2>
+  <ul>
+    <li><strong>供应商</strong> — 按供应商组织筛选</li>
+    <li><strong>客户</strong> — 按客户组织筛选</li>
+  </ul>
+</div>
+
+<!-- § 10 -->
+<div id="s10" class="section-break">
+  <div class="section-header">
+    <div class="section-number">10</div>
+    <h1 class="section-title">报表</h1>
+  </div>
+  <p>通过侧边栏的<strong>报表</strong>进入（仅限管理员、超级管理员、AM、PM）。</p>
+
+  <h2 class="sub">工时报表标签页</h2>
+  <ul>
+    <li><strong>摘要卡片：</strong>总工时、项目数量、记录数量</li>
+    <li><strong>按项目分布：</strong>各项目工时及占比条形图</li>
+    <li><strong>记录日志表：</strong>详细工时记录（最多 50 行）</li>
+    <li><strong>筛选：</strong>项目下拉菜单、日期范围（起止日期）</li>
+  </ul>
+
+  <h2 class="sub">发票报表标签页</h2>
+  <ul>
+    <li><strong>摘要卡片：</strong>已开票总额、已收款、未结清</li>
+    <li><strong>按状态分布：</strong>按状态分组的发票金额（草稿、已发送、已付款、逾期）</li>
+    <li><strong>发票表格：</strong>完整列表，含已收款和余额列</li>
+    <li><strong>筛选：</strong>客户下拉菜单、日期范围（起止日期）</li>
+  </ul>
+</div>
+
+<!-- § 11 -->
+<div id="s11" class="section-break">
+  <div class="section-header">
+    <div class="section-number">11</div>
+    <h1 class="section-title">管理面板</h1>
+  </div>
+  <p>通过侧边栏的<strong>管理面板</strong>进入（仅限管理员、超级管理员）。管理面板包含三个标签页：</p>
+
+  <h2 class="sub">用户标签页</h2>
+  <p>管理系统中的所有用户账号。</p>
+  <h3 class="sub">创建用户</h3>
+  <ol class="step-list">
+    <li>点击<strong>+ 创建用户</strong></li>
+    <li>填写：姓名（必填）、邮箱（必填）、密码（必填）、职位</li>
+    <li>选择用户类型：内部员工、供应商或客户</li>
+    <li>若为供应商/客户：选择所属组织</li>
+    <li>切换分配的角色（可分配多个角色）</li>
+    <li>设置启用/停用状态</li>
+  </ol>
+  <p><strong>可选角色：</strong>超级管理员、管理员、客户经理、项目经理、团队成员、承包商、供应商联系人、客户</p>
+  <p><strong>用户表格</strong>显示：姓名与职位、邮箱、公司类型标签（内部员工/供应商/客户）、角色标签、启用状态。</p>
+
+  <h2 class="sub">客户标签页</h2>
+  <p>管理客户组织。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>字段</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>名称</td><td>必填</td></tr>
+        <tr><td>联系邮箱</td><td></td></tr>
+        <tr><td>联系电话</td><td></td></tr>
+        <tr><td>地址</td><td></td></tr>
+        <tr><td>付款条款</td><td>默认："Net 30"（30 天内付款）</td></tr>
+        <tr><td>币种</td><td>下拉选择</td></tr>
+        <tr><td>启用/停用</td><td>状态切换</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h2 class="sub">供应商标签页</h2>
+  <p>管理供应商组织。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>字段</th><th>说明</th></tr></thead>
+      <tbody>
+        <tr><td>名称</td><td>必填</td></tr>
+        <tr><td>联系邮箱</td><td></td></tr>
+        <tr><td>电话</td><td></td></tr>
+        <tr><td>地址</td><td></td></tr>
+        <tr><td>默认时薪</td><td>显示为 "$X/小时"</td></tr>
+        <tr><td>币种</td><td></td></tr>
+        <tr><td>启用/停用</td><td>状态切换</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- § 12 -->
+<div id="s12" class="section-break">
+  <div class="section-header">
+    <div class="section-number">12</div>
+    <h1 class="section-title">个人资料</h1>
+  </div>
+  <p>点击侧边栏底部的<strong>编辑资料</strong>，或导航至<strong>个人资料</strong>页面。</p>
+
+  <h2 class="sub">可编辑字段</h2>
+  <ul>
+    <li><strong>姓名</strong> — 您的显示名称</li>
+    <li><strong>邮箱</strong> — 您的邮箱地址（Google OAuth 用户不可编辑）</li>
+    <li><strong>职位</strong> — 您的职位名称</li>
+  </ul>
+
+  <h2 class="sub">只读信息</h2>
+  <ul>
+    <li><strong>用户类型</strong>标签（内部员工、供应商或客户）</li>
+    <li><strong>公司名称</strong>（供应商/客户用户显示）</li>
+    <li><strong>认证方式</strong>标签（本地账号或 Google）</li>
+    <li><strong>角色</strong> — 您所分配的角色标签</li>
+  </ul>
+
+  <h2 class="sub">修改密码（仅限本地账号）</h2>
+  <ol class="step-list">
+    <li>输入您的<strong>当前密码</strong></li>
+    <li>输入您的<strong>新密码</strong>（至少 8 个字符）</li>
+    <li><strong>确认</strong>新密码</li>
+    <li>点击<strong>更新密码</strong></li>
+  </ol>
+  <p>Google OAuth 用户无法修改密码，也不会看到此部分。</p>
+</div>
+
+<!-- § 13 -->
+<div id="s13" class="section-break">
+  <div class="section-header">
+    <div class="section-number">13</div>
+    <h1 class="section-title">语言支持</h1>
+  </div>
+  <p>PM Tool 支持三种语言。使用页眉右上角的按钮切换——您的选择会立即应用于整个应用程序。</p>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>按钮</th><th>语言</th></tr></thead>
+      <tbody>
+        <tr><td><strong>EN</strong></td><td>英语</td></tr>
+        <tr><td><strong>简</strong></td><td>简体中文（zh-CN）</td></tr>
+        <tr><td><strong>繁</strong></td><td>繁体中文（zh-TW）</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</div><!-- /content -->
+</body>
+</html>
