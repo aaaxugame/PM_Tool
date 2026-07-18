@@ -129,9 +129,11 @@ Each role sees a customized dashboard after login.
 ### Client Dashboard
 
 - **Billing Summary**: Contracted, Invoiced, Paid, Outstanding amounts
-- **My Projects**: Grid of project cards showing status, approval status, task progress bar, PM/AM assignments, and due dates
+- **My Projects**: Grid of project cards showing status, proposal status (DRAFT/SENT/APPROVED/DECLINED/REVISION REQUESTED), task progress bar, PM/AM assignments, and due dates
 - **Recent Invoices**: Table of latest invoices with status badges
 - **Project Timeline**: Overview of active project milestones
+
+A project only appears here — and in the client's Projects list — once its proposal has actually been sent (see Client Proposal Workflow below). A project still being drafted internally is never visible to the client.
 
 ### Team Member / Generic Dashboard
 
@@ -159,7 +161,7 @@ Access via **Projects** in the sidebar.
 3. **Archived Projects** - Archived vendor projects
 
 **Client users** see one tab:
-1. **My Projects** - Projects associated with your organization
+1. **My Projects** - Projects associated with your organization whose proposal has been sent at least once. A project still being drafted internally (proposal never sent) will not appear here.
 
 ### Creating a Project
 
@@ -189,6 +191,8 @@ Click **+ Create** (top right). Fill in the project form:
 
 Use **Save as Draft** to save without making it active, or **Save** to create the project.
 
+Milestones are **not** part of this form. If you pick Milestone or Mixed billing, a note appears reminding you that milestones are added afterward on the project's own page (Work tab) — see Client Proposal Workflow below.
+
 ### Vendor Project Requests
 
 Vendors can submit project requests by clicking **+ New Request**. The request form includes: Name, Category, Description, Start/End Date, Proposed Workers, Required Skill Set, Billing Method, Estimated Cost, and Estimated Hours.
@@ -199,9 +203,10 @@ Requests can be saved as draft or submitted. Once submitted, PM/AM/Admin users c
 
 For any project with a client assigned, scope and billing terms must be proposed to and approved by the client before the project becomes active. This is separate from Vendor Project Requests above — it governs client sign-off on cost, not a vendor's request to work on a project.
 
-1. **Build the proposal** (PM, AM, Admin, Super Admin) - set the project's Billing Method, Estimated Cost, Estimated Hours, and, for Time & Materials or Mixed billing, an **Hourly Rate**. Add milestones with a **Contracted Amount** for Milestone or Mixed billing.
-2. **Send Proposal** - from the project detail page, click **Send Proposal**. The client receives an email notification. Sending is blocked with an error if an hourly rate is required but not set.
-3. **Client reviews** - the client opens the project and sees a Proposal panel where they can **Approve**, **Decline** (with a required reason), or **Request Revision** (with notes).
+1. **Build the proposal** (PM, AM, Admin, Super Admin) - set the project's Billing Method, Estimated Cost, Estimated Hours, and, for Time & Materials or Mixed billing, an **Hourly Rate**. Add milestones on the project detail page's Work tab, each with a **Contracted Amount** for Milestone or Mixed billing.
+   - The Proposal panel (and the rest of this workflow) only appears on the project detail page once a **Client** has been assigned to the project. If you don't see it, edit the project and set its Client.
+2. **Send Proposal** - from the project detail page, click **Send Proposal**. The client receives an email notification. Sending is blocked with an error if an hourly rate is required but not set. Before this point, the client cannot see the project at all — it will not appear on their Dashboard or Projects list.
+3. **Client reviews** - the client opens the project and sees the Proposed Cost, Estimated Hours, Hourly Rate, and each milestone's Contracted Amount directly on the page, plus a Proposal panel where they can **Approve**, **Decline** (with a required reason), or **Request Revision** (with notes).
 4. **On approval** - the project automatically moves to ACTIVE status, and the Billing Method, Estimated Cost, Estimated Hours, Hourly Rate, and each milestone's Contracted Amount, Name, and Due Date all become locked — they cannot be edited further.
 5. **Starting a new revision** - PM/AM/Admin can click **Start New Revision** to unlock these fields again and bump the proposal version, then edit and resend for approval.
 
@@ -228,7 +233,7 @@ Click any project name to open the detail page, which has four tabs:
 
 1. **Work** - Manage milestones and tasks
    - Create, edit, and delete milestones (Super Admin, Admin, AM, PM only)
-   - Each milestone can carry a **Contracted Amount**, used to bill the client when marked complete (see Client Proposal Workflow above). The milestone's Name, Due Date, and Contracted Amount are all locked once the project's proposal is approved.
+   - Each milestone can carry a **Contracted Amount**, shown next to its due date in the list and used to bill the client when marked complete (see Client Proposal Workflow above). The milestone's Name, Due Date, and Contracted Amount are all locked once the project's proposal is approved.
    - Create, edit, and delete tasks under milestones (managers on any project; Team Members, Contractors, and Vendor Contacts only on projects they're assigned to)
    - Quick-cycle task status by clicking the status badge (TODO -> IN_PROGRESS -> REVIEW -> DONE) — same access rule as editing tasks
    - View team members panel

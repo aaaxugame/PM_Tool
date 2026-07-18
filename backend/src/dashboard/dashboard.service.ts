@@ -335,7 +335,7 @@ export class DashboardService {
 
     const [projects, invoices, upcomingMilestones, recentActivity] = await Promise.all([
       this.prisma.project.findMany({
-        where: { clientId },
+        where: { clientId, proposalSentAt: { not: null } },
         include: {
           tasks: { select: { id: true, status: true } },
           assignments: { include: { user: { select: { id: true, name: true } } } },
@@ -348,12 +348,12 @@ export class DashboardService {
         orderBy: { invoiceDate: 'desc' },
       }),
       this.prisma.milestone.findMany({
-        where: { project: { clientId }, dueDate: { gte: now, lte: in30 }, status: 'PENDING' as any },
+        where: { project: { clientId, proposalSentAt: { not: null } }, dueDate: { gte: now, lte: in30 }, status: 'PENDING' as any },
         include: { project: { select: { id: true, name: true } } },
         orderBy: { dueDate: 'asc' }, take: 8,
       }),
       this.prisma.timeEntry.findMany({
-        where: { project: { clientId } },
+        where: { project: { clientId, proposalSentAt: { not: null } } },
         include: { user: { select: { id: true, name: true } }, project: { select: { id: true, name: true } }, task: { select: { id: true, name: true } } },
         orderBy: { date: 'desc' }, take: 8,
       }),
@@ -363,7 +363,7 @@ export class DashboardService {
       const done = p.tasks.filter((t: any) => t.status === 'DONE').length;
       const pct = p._count.tasks > 0 ? Math.round((done / p._count.tasks) * 100) : 0;
       return {
-        id: p.id, name: p.name, status: p.status, approvalStatus: p.approvalStatus,
+        id: p.id, name: p.name, status: p.status, proposalStatus: (p as any).proposalStatus,
         pct, totalTasks: p._count.tasks, doneTasks: done,
         startDate: p.startDate, endDate: p.endDate,
         pm: p.assignments.find((a: any) => a.assignmentRole === 'PROJECT_MANAGER')?.user ?? null,

@@ -583,6 +583,11 @@ function ProjectCreationModal({
                   <option key={m} value={m}>{m.replace(/_/g, ' ')}</option>
                 ))}
               </select>
+              {(form.billingMethod === 'MILESTONE' || form.billingMethod === 'MIXED') && (
+                <p className="text-xs text-gray-400 mt-1">
+                  {isEditing ? 'Add/edit milestones on the project page (Work tab).' : "You'll add milestones on the project page (Work tab) after creating it."}
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Estimated Cost ($)</label>

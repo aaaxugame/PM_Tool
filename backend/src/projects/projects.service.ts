@@ -142,7 +142,7 @@ export class ProjectsService {
 
   findForClient(clientId: number) {
     return this.prisma.project.findMany({
-      where: { clientId },
+      where: { clientId, proposalSentAt: { not: null } },
       include: PROJECT_INCLUDE,
       orderBy: { createdAt: 'desc' },
     });

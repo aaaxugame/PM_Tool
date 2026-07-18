@@ -356,6 +356,9 @@ export default function ProjectDetailPage() {
           { label: t('projects.billingMethod'), value: project.billingMethod.replace(/_/g, ' ') },
           { label: t('projects.startDate'), value: project.startDate ? project.startDate.slice(0, 10) : '—' },
           { label: t('projects.endDate'), value: project.endDate ? project.endDate.slice(0, 10) : '—' },
+          ...(project.proposedCost ? [{ label: 'Proposed Cost', value: `$${parseFloat(project.proposedCost).toLocaleString('en-US', { minimumFractionDigits: 2 })}` }] : []),
+          ...(project.estimatedHours ? [{ label: 'Estimated Hours', value: `${project.estimatedHours}h` }] : []),
+          ...(project.hourlyRate ? [{ label: 'Hourly Rate', value: `$${parseFloat(project.hourlyRate).toFixed(2)}/h` }] : []),
           ...(project.projectType === 'VENDOR' && project.requestingVendor
             ? [{ label: 'Originated By', value: project.requestingVendor.name }]
             : []),
@@ -433,6 +436,11 @@ export default function ProjectDetailPage() {
               {project.proposalRevisionNote}
             </div>
           )}
+        </div>
+      )}
+      {!project.clientId && canManage && (
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-5 py-3 text-xs text-amber-700">
+          No client attached — the proposal workflow (Send Proposal, client approval, milestone billing terms) only applies once this project has a client. Edit the project to attach one.
         </div>
       )}
 
@@ -651,6 +659,9 @@ export default function ProjectDetailPage() {
                             </span>
                             {m.dueDate && (
                               <span className="text-xs text-gray-400 flex-shrink-0">{m.dueDate.slice(0, 10)}</span>
+                            )}
+                            {m.amount && (
+                              <span className="text-xs font-mono text-gray-500 flex-shrink-0">${parseFloat(m.amount).toFixed(2)}</span>
                             )}
                             {m.triggersInvoice && (
                               <span className="px-1.5 py-0.5 bg-purple-50 text-purple-700 rounded text-xs flex-shrink-0">💰 Invoice</span>

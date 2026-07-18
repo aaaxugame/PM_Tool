@@ -82,7 +82,7 @@ export interface AMDashboard {
 
 export interface ClientDashboard {
   projectCards: {
-    id: number; name: string; status: string; approvalStatus: string
+    id: number; name: string; status: string; proposalStatus: string
     pct: number; totalTasks: number; doneTasks: number
     startDate: string | null; endDate: string | null
     pm: { id: number; name: string } | null

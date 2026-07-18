@@ -13,10 +13,12 @@ const PROJECT_STATUS_COLORS: Record<string, string> = {
   ARCHIVED: 'bg-gray-100 text-gray-500',
 }
 
-const APPROVAL_COLORS: Record<string, string> = {
-  PENDING: 'bg-yellow-100 text-yellow-700',
+const PROPOSAL_STATUS_COLORS: Record<string, string> = {
+  DRAFT: 'bg-gray-100 text-gray-600',
+  SENT: 'bg-yellow-100 text-yellow-700',
   APPROVED: 'bg-green-100 text-green-700',
-  REJECTED: 'bg-red-100 text-red-700',
+  DECLINED: 'bg-red-100 text-red-700',
+  REVISION_REQUESTED: 'bg-orange-100 text-orange-700',
 }
 
 const INVOICE_STATUS_COLORS: Record<string, string> = {
@@ -104,8 +106,8 @@ export default function ClientDashboard() {
                     <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PROJECT_STATUS_COLORS[p.status] ?? 'bg-gray-100 text-gray-600'}`}>
                       {p.status.replace('_', ' ')}
                     </span>
-                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${APPROVAL_COLORS[p.approvalStatus] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {p.approvalStatus}
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${PROPOSAL_STATUS_COLORS[p.proposalStatus] ?? 'bg-gray-100 text-gray-600'}`}>
+                      {p.proposalStatus.replace('_', ' ')}
                     </span>
                   </div>
                 </div>
